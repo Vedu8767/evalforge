@@ -1,0 +1,41 @@
+name: Nightly Health Check
+
+on:
+  schedule:
+    - cron: "0 2 * * *"   # 2 AM UTC every day (7:30 AM IST)
+  workflow_dispatch:        # allow manual trigger
+
+jobs:
+  health-check:
+    name: Production Health Check
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check API health
+        run: |
+          response=$(curl -s -o /dev/null -w "%{http_code}" \
+            ${{ secrets.API_HEALTH_URL }}/health)
+          if [ "$response" != "200" ]; then
+            echo "❌ API health check failed: HTTP $response"
+            exit 1
+          fi
+          echo "✅ API is healthy"
+
+      - name: Check frontend
+        run: |
+          response=$(curl -s -o /dev/null -w "%{http_code}" \
+            ${{ secrets.FRONTEND_URL }})
+          if [ "$response" != "200" ]; then
+            echo "❌ Frontend check failed: HTTP $response"
+            exit 1
+          fi
+          echo "✅ Frontend is healthy"
+
+      - name: Notify on failure
+        if: failure()
+        run: |
+          curl -X POST ${{ secrets.SLACK_WEBHOOK_URL }} \
+            -H "Content-Type: application/json" \
+            -d '{"text":"🚨 EvalForge nightly health check FAILED — check Railway + Vercel dashboards"}'

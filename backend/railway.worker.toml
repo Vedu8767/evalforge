@@ -1,0 +1,14 @@
+# railway.worker.toml — Celery Worker Service
+# In Railway: create a second service from same repo,
+# override start command to: celery -A celery_worker worker --loglevel=info --concurrency=2
+
+[build]
+builder = "DOCKERFILE"
+dockerfilePath = "Dockerfile"
+
+[deploy]
+startCommand = "celery -A celery_worker worker --loglevel=info --concurrency=2"
+restartPolicyType = "ON_FAILURE"
+restartPolicyMaxRetries = 5
+
+# No healthcheck for workers — Railway monitors process exit
