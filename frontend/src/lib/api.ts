@@ -5,7 +5,6 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
 export const api = axios.create({ baseURL: API_URL });
 
-// Attach JWT token from NextAuth session to every request
 api.interceptors.request.use(async (config) => {
   const session = await getSession();
   if (session?.accessToken) {
@@ -14,7 +13,7 @@ api.interceptors.request.use(async (config) => {
   return config;
 });
 
-// ─── Types ──────────────────────────────────────────────────────────────────
+// ─── Types ───────────────────────────────────────────────────────────────────
 
 export type EvalRun = {
   id: string;
@@ -42,7 +41,9 @@ export type EvalResult = {
   hallucination_confidence: number | null;
   hallucination_reason: string | null;
   jailbreak_succeeded: boolean | null;
+  jailbreak_category: string | null;
   factual_score: number | null;
+  similarity_score: number | null;
   judge_verdict: string | null;
   judge_reasoning: string | null;
   latency_ms: number | null;
@@ -73,10 +74,8 @@ export type Dataset = {
   created_at: string;
 };
 
+// ─── API Functions ────────────────────────────────────────────────────────────
 
-// ─── API Functions ───────────────────────────────────────────────────────────
-
-// Eval Runs
 export const evalRunsApi = {
   list: (params?: { status?: string; limit?: number }) =>
     api.get<EvalRun[]>("/eval-runs", { params }).then((r) => r.data),
@@ -97,19 +96,19 @@ export const evalRunsApi = {
   cancel: (id: string) => api.delete(`/eval-runs/${id}`),
 };
 
-// Model Endpoints
 export const modelsApi = {
   list: () => api.get<ModelEndpoint[]>("/model-endpoints").then((r) => r.data),
-  create: (data: any) => api.post<ModelEndpoint>("/model-endpoints", data).then((r) => r.data),
+  create: (data: any) =>
+    api.post<ModelEndpoint>("/model-endpoints", data).then((r) => r.data),
   test: (id: string, prompt?: string) =>
     api.post(`/model-endpoints/${id}/test`, { prompt }).then((r) => r.data),
   delete: (id: string) => api.delete(`/model-endpoints/${id}`),
 };
 
-// Datasets
 export const datasetsApi = {
   list: () => api.get<Dataset[]>("/datasets").then((r) => r.data),
-  create: (data: any) => api.post<Dataset>("/datasets", data).then((r) => r.data),
+  create: (data: any) =>
+    api.post<Dataset>("/datasets", data).then((r) => r.data),
   uploadCSV: (id: string, file: File) => {
     const form = new FormData();
     form.append("file", file);
