@@ -5,8 +5,7 @@ import { evalRunsApi, type EvalRun, type EvalResult } from "@/lib/api";
 import { useParams } from "next/navigation";
 import { clsx } from "clsx";
 import {
-  CheckCircle, XCircle, AlertTriangle, Clock,
-  Shield, Brain, ChevronDown, ChevronUp, Download
+  CheckCircle, AlertTriangle, ChevronDown, ChevronUp, Download
 } from "lucide-react";
 
 function ScoreCircle({ score, label }: { score: number | null; label: string }) {
@@ -15,7 +14,6 @@ function ScoreCircle({ score, label }: { score: number | null; label: string }) 
     score >= 90 ? "text-emerald-400" :
     score >= 75 ? "text-green-400" :
     score >= 60 ? "text-yellow-400" : "text-red-400";
-
   return (
     <div className="flex flex-col items-center gap-1">
       <div className={clsx("text-3xl font-bold tabular-nums", color)}>
@@ -28,11 +26,11 @@ function ScoreCircle({ score, label }: { score: number | null; label: string }) 
 
 function StatusBadge({ status }: { status: EvalRun["status"] }) {
   const map: Record<string, { color: string; label: string; dot: string }> = {
-    queued:    { color: "text-gray-400",   label: "Queued",    dot: "bg-gray-500" },
-    running:   { color: "text-blue-400",   label: "Running",   dot: "bg-blue-400 animate-pulse" },
-    completed: { color: "text-emerald-400",label: "Completed", dot: "bg-emerald-400" },
-    failed:    { color: "text-red-400",    label: "Failed",    dot: "bg-red-400" },
-    cancelled: { color: "text-gray-500",   label: "Cancelled", dot: "bg-gray-600" },
+    queued:    { color: "text-gray-400",    label: "Queued",    dot: "bg-gray-500" },
+    running:   { color: "text-blue-400",    label: "Running",   dot: "bg-blue-400 animate-pulse" },
+    completed: { color: "text-emerald-400", label: "Completed", dot: "bg-emerald-400" },
+    failed:    { color: "text-red-400",     label: "Failed",    dot: "bg-red-400" },
+    cancelled: { color: "text-gray-500",    label: "Cancelled", dot: "bg-gray-600" },
   };
   const s = map[status] ?? map.queued;
   return (
@@ -61,7 +59,6 @@ function VerdictBadge({ verdict }: { verdict: string | null }) {
 
 function ResultRow({ result }: { result: EvalResult }) {
   const [expanded, setExpanded] = useState(false);
-
   return (
     <>
       <tr
@@ -122,8 +119,8 @@ function ResultRow({ result }: { result: EvalResult }) {
                 <div className="flex gap-4 text-gray-500">
                   <span>Tokens: {result.tokens_used ?? "—"}</span>
                   <span>Latency: {result.latency_ms ? `${result.latency_ms}ms` : "—"}</span>
-                  {result.similarity_score !== null && (
-                    <span>Similarity: {(result.similarity_score * 100).toFixed(1)}%</span>
+                  {result.similarity_score != null && (
+                    <span>Similarity: {((result.similarity_score) * 100).toFixed(1)}%</span>
                   )}
                 </div>
               </div>
@@ -142,36 +139,28 @@ export default function EvalRunDetailPage() {
   const [filterVerdict, setFilterVerdict] = useState("");
   const sseRef = useRef<EventSource | null>(null);
 
-  const { data: run, refetch } = useQuery({
+  const { data: run, refetch } = useQuery<EvalRun>({
     queryKey: ["eval-run", runId],
     queryFn: () => evalRunsApi.get(runId),
-    refetchInterval: (data) =>
-      data?.status === "running" || data?.status === "queued" ? 3000 : false,
+    refetchInterval: 3000,
   });
 
-  const { data: results = [] } = useQuery({
+  const { data: results = [] } = useQuery<EvalResult[]>({
     queryKey: ["eval-results", runId, filterVerdict],
     queryFn: () => evalRunsApi.results(runId, { verdict: filterVerdict || undefined, limit: 100 }),
     enabled: run?.status === "completed" || run?.status === "failed",
   });
 
-  // SSE for live results during run
   useEffect(() => {
     if (run?.status !== "running" && run?.status !== "queued") return;
-
     const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
     const es = new EventSource(`${apiUrl}/eval-runs/${runId}/stream`);
     sseRef.current = es;
-
     es.onmessage = (e) => {
       const data = JSON.parse(e.data);
       setLiveResults((prev) => [...prev.slice(-99), data]);
     };
-    es.addEventListener("done", () => {
-      es.close();
-      refetch();
-    });
-
+    es.addEventListener("done", () => { es.close(); refetch(); });
     return () => es.close();
   }, [run?.status, runId, refetch]);
 
@@ -186,9 +175,7 @@ export default function EvalRunDetailPage() {
     a.click();
   };
 
-  if (!run) return (
-    <div className="p-8 text-gray-600 text-sm">Loading...</div>
-  );
+  if (!run) return <div className="p-8 text-gray-600 text-sm">Loading...</div>;
 
   const progress = run.total_rows > 0
     ? Math.round((run.completed_rows / run.total_rows) * 100)
@@ -196,7 +183,6 @@ export default function EvalRunDetailPage() {
 
   return (
     <div className="p-8 max-w-7xl mx-auto">
-      {/* Header */}
       <div className="flex items-start justify-between mb-8">
         <div>
           <div className="flex items-center gap-3 mb-1">
@@ -217,7 +203,6 @@ export default function EvalRunDetailPage() {
         )}
       </div>
 
-      {/* Progress bar (running state) */}
       {(run.status === "running" || run.status === "queued") && (
         <div className="bg-gray-900 rounded-xl border border-gray-800 p-5 mb-6">
           <div className="flex justify-between text-sm text-gray-400 mb-3">
@@ -230,11 +215,10 @@ export default function EvalRunDetailPage() {
               style={{ width: `${progress}%` }}
             />
           </div>
-          {/* Live feed */}
           {liveResults.length > 0 && (
             <div className="mt-4 space-y-1 max-h-40 overflow-y-auto">
-              {liveResults.slice(-10).map((r) => (
-                <div key={r.id} className="flex items-center gap-3 text-xs">
+              {liveResults.slice(-10).map((r, i) => (
+                <div key={i} className="flex items-center gap-3 text-xs">
                   {r.hallucination === false
                     ? <CheckCircle size={11} className="text-emerald-500 flex-shrink-0" />
                     : r.hallucination === true
@@ -249,14 +233,13 @@ export default function EvalRunDetailPage() {
         </div>
       )}
 
-      {/* Score cards (completed) */}
       {run.status === "completed" && (
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
           {[
-            { label: "Overall",          value: run.overall_score },
+            { label: "Overall",           value: run.overall_score },
             { label: "Hallucination-free", value: run.hallucination_score },
-            { label: "Jailbreak resist.", value: run.jailbreak_resistance_score },
-            { label: "Factual accuracy",  value: run.factual_accuracy_score },
+            { label: "Jailbreak resist.",  value: run.jailbreak_resistance_score },
+            { label: "Factual accuracy",   value: run.factual_accuracy_score },
           ].map(({ label, value }) => (
             <div key={label} className="bg-gray-900 rounded-xl border border-gray-800 p-5 text-center">
               <ScoreCircle score={value} label={label} />
@@ -265,14 +248,12 @@ export default function EvalRunDetailPage() {
         </div>
       )}
 
-      {/* Error */}
       {run.status === "failed" && run.error_message && (
         <div className="bg-red-900/20 border border-red-800 rounded-xl p-4 mb-6 text-sm text-red-300">
           <strong>Error:</strong> {run.error_message}
         </div>
       )}
 
-      {/* Results table */}
       {results.length > 0 && (
         <div className="bg-gray-900 rounded-xl border border-gray-800">
           <div className="px-6 py-4 border-b border-gray-800 flex items-center justify-between">
