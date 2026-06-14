@@ -1,9 +1,11 @@
 "use client";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
+import { useEffect } from "react";
 import {
   LayoutDashboard, Database, Play, Cpu,
-  Settings, Shield, ChevronRight, Zap
+  Settings, Shield, Zap
 } from "lucide-react";
 import { clsx } from "clsx";
 
@@ -18,12 +20,28 @@ const nav = [
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const router = useRouter();
+  const { data: session, status } = useSession();
+
+  useEffect(() => {
+    if (status === "unauthenticated") {
+      router.push("/login");
+    }
+  }, [status, router]);
+
+  if (status === "loading") {
+    return (
+      <div className="flex h-screen items-center justify-center bg-gray-950">
+        <div className="text-gray-500 text-sm">Loading...</div>
+      </div>
+    );
+  }
+
+  if (!session) return null;
 
   return (
     <div className="flex h-screen overflow-hidden">
-      {/* Sidebar */}
       <aside className="w-56 flex-shrink-0 bg-gray-900 border-r border-gray-800 flex flex-col">
-        {/* Logo */}
         <div className="px-5 py-5 border-b border-gray-800">
           <div className="flex items-center gap-2.5">
             <div className="w-7 h-7 bg-indigo-600 rounded-lg flex items-center justify-center">
@@ -32,8 +50,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             <span className="font-semibold text-white tracking-tight">EvalForge</span>
           </div>
         </div>
-
-        {/* Nav */}
         <nav className="flex-1 py-4 px-3 space-y-0.5 overflow-y-auto">
           {nav.map(({ href, label, icon: Icon }) => {
             const active = pathname === href || pathname.startsWith(href + "/");
@@ -54,14 +70,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             );
           })}
         </nav>
-
-        {/* Footer */}
         <div className="px-4 py-4 border-t border-gray-800">
           <div className="text-xs text-gray-600">EvalForge v0.1</div>
         </div>
       </aside>
-
-      {/* Main */}
       <main className="flex-1 overflow-y-auto bg-gray-950">
         {children}
       </main>
