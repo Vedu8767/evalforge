@@ -13,8 +13,10 @@ from app.routers.billing import router as billing_router
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    if settings.environment == "development":
-        await init_db()
+    # FIXED: Always initialize the database on startup so production/Render tables exist.
+    # If you handle production migrations separately via Alembic, you can revert this,
+    # but for an MVP deployment, running init_db() ensures tables are created.
+    await init_db()
     yield
 
 
@@ -25,9 +27,16 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+# FIXED: Explicitly defined origins alongside the regex pattern for maximum compatibility with Vercel
+origins = [
+    "https://evalforge-vedashree-kulkarni-s-projects.vercel.app",
+    "http://localhost:3000",
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origin_regex=r"https://.*\.vercel\.app|http://localhost:3000",
+    allow_origins=origins,
+    allow_origin_regex=r"https://.*\.vercel\.app",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
