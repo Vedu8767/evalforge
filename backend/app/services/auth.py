@@ -1,72 +1,63 @@
+"""
+Auth Service — password hashing (direct bcrypt, no passlib)
+JWT creation/verification, API key encryption
+"""
+import bcrypt
+import jwt
 from datetime import datetime, timedelta
-from typing import Optional
-import base64
-import os
-
-from jose import JWTError, jwt
-from passlib.context import CryptContext
 from cryptography.fernet import Fernet
-from cryptography.hazmat.primitives import hashes
-from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
+import base64
+import hashlib
 
 from app.config import settings
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
-
-# ─── Password ────────────────────────────────────────────────────────────────
+# ─── Password hashing (bcrypt directly — no passlib) ──────────────────────────
 
 def hash_password(password: str) -> str:
-    return pwd_context.hash(password)
+    # bcrypt has a 72-byte limit; truncate safely if needed
+    pw_bytes = password.encode("utf-8")[:72]
+    hashed = bcrypt.hashpw(pw_bytes, bcrypt.gensalt())
+    return hashed.decode("utf-8")
 
 
-def verify_password(plain: str, hashed: str) -> bool:
-    return pwd_context.verify(plain, hashed)
+def verify_password(password: str, hashed: str) -> bool:
+    pw_bytes = password.encode("utf-8")[:72]
+    try:
+        return bcrypt.checkpw(pw_bytes, hashed.encode("utf-8"))
+    except (ValueError, AttributeError):
+        return False
 
 
-# ─── JWT ─────────────────────────────────────────────────────────────────────
+# ─── JWT ────────────────────────────────────────────────────────────────────
 
-def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
+def create_access_token(data: dict, expires_minutes: int | None = None) -> str:
     to_encode = data.copy()
-    expire = datetime.utcnow() + (expires_delta or timedelta(minutes=settings.jwt_expire_minutes))
+    expire = datetime.utcnow() + timedelta(
+        minutes=expires_minutes or settings.jwt_expire_minutes
+    )
     to_encode.update({"exp": expire})
     return jwt.encode(to_encode, settings.jwt_secret, algorithm=settings.jwt_algorithm)
 
 
-def decode_token(token: str) -> Optional[dict]:
-    try:
-        return jwt.decode(token, settings.jwt_secret, algorithms=[settings.jwt_algorithm])
-    except JWTError:
-        return None
+def decode_access_token(token: str) -> dict:
+    return jwt.decode(token, settings.jwt_secret, algorithms=[settings.jwt_algorithm])
 
 
-# ─── API Key Encryption ───────────────────────────────────────────────────────
-# We use Fernet (AES-128-CBC + HMAC) symmetric encryption.
-# The encryption key lives only in env vars — never in the DB.
+# ─── API key encryption (AES-256 via Fernet) ──────────────────────────────────
 
 def _get_fernet() -> Fernet:
-    """Derive a Fernet key from the configured ENCRYPTION_KEY."""
-    raw = settings.encryption_key.encode()
-    # Pad or truncate to 32 bytes, then base64-urlsafe encode for Fernet
-    key_bytes = raw[:32].ljust(32, b"0")
-    fernet_key = base64.urlsafe_b64encode(key_bytes)
+    key_bytes = settings.encryption_key.encode("utf-8")
+    digest = hashlib.sha256(key_bytes).digest()
+    fernet_key = base64.urlsafe_b64encode(digest)
     return Fernet(fernet_key)
 
 
-def encrypt_api_key(api_key: str) -> str:
-    """Encrypt an API key for storage."""
+def encrypt_api_key(plain_key: str) -> str:
     f = _get_fernet()
-    return f.encrypt(api_key.encode()).decode()
+    return f.encrypt(plain_key.encode("utf-8")).decode("utf-8")
 
 
-def decrypt_api_key(encrypted: str) -> str:
-    """Decrypt a stored API key for use in LLM calls."""
+def decrypt_api_key(encrypted_key: str) -> str:
     f = _get_fernet()
-    return f.decrypt(encrypted.encode()).decode()
-
-
-def mask_api_key(api_key: str) -> str:
-    """Return a masked version safe to show in UI. e.g. sk-...****"""
-    if len(api_key) <= 8:
-        return "****"
-    return api_key[:5] + "..." + "****"
+    return f.decrypt(encrypted_key.encode("utf-8")).decode("utf-8")
