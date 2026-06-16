@@ -40,8 +40,17 @@ def create_access_token(data: dict, expires_minutes: int | None = None) -> str:
     return jwt.encode(to_encode, settings.jwt_secret, algorithm=settings.jwt_algorithm)
 
 
-def decode_access_token(token: str) -> dict:
-    return jwt.decode(token, settings.jwt_secret, algorithms=[settings.jwt_algorithm])
+def decode_token(token: str) -> dict | None:
+    """Decode and verify a JWT. Returns None if invalid/expired instead of raising,
+    since routers/auth.py checks `if not payload:` rather than catching exceptions."""
+    try:
+        return jwt.decode(token, settings.jwt_secret, algorithms=[settings.jwt_algorithm])
+    except jwt.PyJWTError:
+        return None
+
+
+# Backward-compatible alias in case any other file imports the old name
+decode_access_token = decode_token
 
 
 # ─── API key encryption (AES-256 via Fernet) ──────────────────────────────────
