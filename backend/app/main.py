@@ -3,7 +3,6 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import settings
-from app.db import init_db
 from app.routers import auth, eval_runs
 from app.routers.models import router as models_router
 from app.routers.datasets import router as datasets_router
@@ -13,10 +12,11 @@ from app.routers.billing import router as billing_router
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # FIXED: Always initialize the database on startup so production/Render tables exist.
-    # If you handle production migrations separately via Alembic, you can revert this,
-    # but for an MVP deployment, running init_db() ensures tables are created.
-    await init_db()
+    # Tables are created via Alembic migrations (alembic upgrade head),
+    # run manually before deploy. We do NOT call init_db() here because
+    # it tries to open its own DB connection on every cold start, and
+    # any connection issue (e.g. wrong password, DB asleep) crashes the
+    # whole app before it can even serve /health.
     yield
 
 
@@ -27,8 +27,11 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# FIXED: Explicitly defined origins alongside the regex pattern for maximum compatibility with Vercel
+# ─── CORS ────────────────────────────────────────────────────────────────────
+# Explicit origins list + regex fallback so any *.vercel.app preview/production
+# URL works without needing to update this file every time Vercel changes the URL.
 origins = [
+    settings.frontend_url,
     "https://evalforge-vedashree-kulkarni-s-projects.vercel.app",
     "http://localhost:3000",
 ]
