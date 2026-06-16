@@ -15,7 +15,6 @@ from app.config import settings
 # ─── Password hashing (bcrypt directly — no passlib) ──────────────────────────
 
 def hash_password(password: str) -> str:
-    # bcrypt has a 72-byte limit; truncate safely if needed
     pw_bytes = password.encode("utf-8")[:72]
     hashed = bcrypt.hashpw(pw_bytes, bcrypt.gensalt())
     return hashed.decode("utf-8")
@@ -41,15 +40,13 @@ def create_access_token(data: dict, expires_minutes: int | None = None) -> str:
 
 
 def decode_token(token: str) -> dict | None:
-    """Decode and verify a JWT. Returns None if invalid/expired instead of raising,
-    since routers/auth.py checks `if not payload:` rather than catching exceptions."""
     try:
         return jwt.decode(token, settings.jwt_secret, algorithms=[settings.jwt_algorithm])
     except jwt.PyJWTError:
         return None
 
 
-# Backward-compatible alias in case any other file imports the old name
+# Backward-compatible alias
 decode_access_token = decode_token
 
 
@@ -70,3 +67,11 @@ def encrypt_api_key(plain_key: str) -> str:
 def decrypt_api_key(encrypted_key: str) -> str:
     f = _get_fernet()
     return f.decrypt(encrypted_key.encode("utf-8")).decode("utf-8")
+
+
+def mask_api_key(plain_key: str) -> str:
+    """Return a masked version of an API key for display in the UI,
+    e.g. 'gsk_abc123...xyz9' -> 'gsk_...xyz9'. Never expose the full key."""
+    if not plain_key or len(plain_key) <= 8:
+        return "••••••••"
+    return f"{plain_key[:4]}...{plain_key[-4:]}"
