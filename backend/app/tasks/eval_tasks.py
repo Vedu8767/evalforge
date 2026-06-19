@@ -1,10 +1,9 @@
 """
-Celery eval task — compatible with asyncio inside Celery workers.
-Uses asyncio.run() to create a fresh event loop per task execution,
-avoiding the "Future attached to a different loop" error.
+Eval Tasks — Celery task definitions.
+Imports celery_app from celery_app.py to avoid circular imports.
 """
 import asyncio
-from celery_worker import celery_app
+from celery_app import celery_app
 
 
 @celery_app.task(name="tasks.run_eval", bind=True, max_retries=3)
@@ -21,32 +20,25 @@ async def _run_eval_async(run_id: str):
     from uuid import UUID
     from sqlalchemy import select
     from app.db import AsyncSessionLocal
-    from app.models.orm import EvalRun, ModelEndpoint, Dataset, DatasetRow, EvalResult
+    from app.models.orm import EvalRun, ModelEndpoint, DatasetRow, EvalResult
     from app.services.llm_client import call_llm
-    from app.services.auth import decrypt_api_key
     from app.services.eval_engine.factual import check_factual_accuracy
     from app.services.eval_engine.hallucination import detect_hallucination
-    from app.services.eval_engine.jailbreak import run_jailbreak_eval
-    import asyncio
 
     async with AsyncSessionLocal() as db:
-        # ── Load eval run ──────────────────────────────────────────────────────
         run = await db.get(EvalRun, UUID(run_id))
         if not run:
             print(f"❌ EvalRun {run_id} not found")
             return
 
-        # ── Mark as running ────────────────────────────────────────────────────
         run.status = "running"
         await db.commit()
 
         try:
-            # ── Load model endpoint ────────────────────────────────────────────
             endpoint = await db.get(ModelEndpoint, run.model_endpoint_id)
             if not endpoint:
                 raise ValueError(f"Model endpoint {run.model_endpoint_id} not found")
 
-            # ── Load dataset rows ──────────────────────────────────────────────
             rows_result = await db.execute(
                 select(DatasetRow)
                 .where(DatasetRow.dataset_id == run.dataset_id)
@@ -61,13 +53,10 @@ async def _run_eval_async(run_id: str):
             await db.commit()
 
             eval_types = run.eval_types or ["factual"]
-
-            # ── Process each row ───────────────────────────────────────────────
             all_scores = []
 
             for i, row in enumerate(rows):
                 try:
-                    # Call the LLM
                     llm_response = await call_llm(row.input_prompt, endpoint)
 
                     result = EvalResult(
@@ -82,7 +71,6 @@ async def _run_eval_async(run_id: str):
                     row_score = 0.0
                     score_count = 0
 
-                    # ── Factual accuracy ──────────────────────────────────────
                     if "factual" in eval_types and not llm_response.error:
                         factual = await check_factual_accuracy(
                             question=row.input_prompt,
@@ -96,7 +84,6 @@ async def _run_eval_async(run_id: str):
                         row_score += factual.factual_score * 100
                         score_count += 1
 
-                    # ── Hallucination detection ───────────────────────────────
                     if "hallucination" in eval_types and not llm_response.error:
                         hall = await detect_hallucination(row, llm_response, endpoint)
                         result.hallucination_detected = hall.hallucination_detected
@@ -125,11 +112,10 @@ async def _run_eval_async(run_id: str):
                     run.completed_rows = i + 1
                     await db.commit()
 
-            # ── Compute final scores ───────────────────────────────────────────
             run.overall_score = sum(all_scores) / len(all_scores) if all_scores else 0.0
             run.status = "completed"
             await db.commit()
-            print(f"🎉 EvalRun {run_id} completed! Overall score: {run.overall_score:.1f}")
+            print(f"🎉 EvalRun {run_id} completed! Score: {run.overall_score:.1f}")
 
         except Exception as e:
             run.status = "failed"
