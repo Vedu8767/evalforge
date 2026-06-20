@@ -39,10 +39,11 @@ async def _run_eval_async(run_id: str):
             if not endpoint:
                 raise ValueError(f"Model endpoint {run.model_endpoint_id} not found")
 
+            # NOTE: DatasetRow has no row_index column — order by created_at instead
             rows_result = await db.execute(
                 select(DatasetRow)
                 .where(DatasetRow.dataset_id == run.dataset_id)
-                .order_by(DatasetRow.row_index)
+                .order_by(DatasetRow.created_at)
             )
             rows = rows_result.scalars().all()
 
@@ -113,6 +114,7 @@ async def _run_eval_async(run_id: str):
                     await db.commit()
 
             run.overall_score = sum(all_scores) / len(all_scores) if all_scores else 0.0
+            run.factual_accuracy_score = run.overall_score
             run.status = "completed"
             await db.commit()
             print(f"🎉 EvalRun {run_id} completed! Score: {run.overall_score:.1f}")
