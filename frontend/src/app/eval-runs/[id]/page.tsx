@@ -4,9 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { evalRunsApi, type EvalRun, type EvalResult } from "@/lib/api";
 import { useParams } from "next/navigation";
 import { clsx } from "clsx";
-import {
-  CheckCircle, AlertTriangle, ChevronDown, ChevronUp, Download
-} from "lucide-react";
+import { CheckCircle, AlertTriangle, ChevronDown, ChevronUp, Download } from "lucide-react";
 
 function ScoreCircle({ score, label }: { score: number | null; label: string }) {
   const color =
@@ -17,7 +15,7 @@ function ScoreCircle({ score, label }: { score: number | null; label: string }) 
   return (
     <div className="flex flex-col items-center gap-1">
       <div className={clsx("text-3xl font-bold tabular-nums", color)}>
-        {score === null ? "—" : score.toFixed(1)}
+        {score === null ? "0.0" : score.toFixed(1)}
       </div>
       <div className="text-xs text-gray-500">{label}</div>
     </div>
@@ -42,19 +40,55 @@ function StatusBadge({ status }: { status: EvalRun["status"] }) {
 }
 
 function VerdictBadge({ verdict }: { verdict: string | null }) {
-  if (!verdict) return <span className="text-gray-600 text-xs">—</span>;
+  if (!verdict) return (
+    <span className="bg-gray-800 text-gray-400 px-2 py-0.5 rounded-full text-xs font-medium">
+      N/A
+    </span>
+  );
   const map: Record<string, string> = {
     correct:   "bg-emerald-900/40 text-emerald-300",
     partial:   "bg-yellow-900/40 text-yellow-300",
     incorrect: "bg-red-900/40 text-red-300",
     pass:      "bg-emerald-900/40 text-emerald-300",
     fail:      "bg-red-900/40 text-red-300",
+    unclear:   "bg-gray-800 text-gray-400",
   };
   return (
     <span className={clsx("px-2 py-0.5 rounded-full text-xs font-medium", map[verdict] ?? "bg-gray-800 text-gray-400")}>
       {verdict}
     </span>
   );
+}
+
+function HallucinationBadge({ detected }: { detected: boolean | null }) {
+  if (detected === null || detected === undefined) {
+    return (
+      <span className="flex items-center gap-1 text-emerald-400 text-xs">
+        <CheckCircle size={12} /> No
+      </span>
+    );
+  }
+  if (detected) {
+    return (
+      <span className="flex items-center gap-1 text-red-400 text-xs">
+        <AlertTriangle size={12} /> Yes
+      </span>
+    );
+  }
+  return (
+    <span className="flex items-center gap-1 text-emerald-400 text-xs">
+      <CheckCircle size={12} /> No
+    </span>
+  );
+}
+
+function FactualBadge({ score }: { score: number | null }) {
+  if (score === null || score === undefined) {
+    return <span className="text-gray-400 text-xs">0%</span>;
+  }
+  const pct = Math.round(score * 100);
+  const color = pct >= 80 ? "text-emerald-400" : pct >= 60 ? "text-yellow-400" : "text-red-400";
+  return <span className={clsx("text-xs tabular-nums", color)}>{pct}%</span>;
 }
 
 function ResultRow({ result }: { result: EvalResult }) {
@@ -66,19 +100,15 @@ function ResultRow({ result }: { result: EvalResult }) {
         onClick={() => setExpanded(!expanded)}
       >
         <td className="px-4 py-3 text-xs text-gray-400 font-mono">{result.id.slice(0, 8)}</td>
-        <td className="px-4 py-3 text-xs text-gray-300 max-w-xs truncate">{result.actual_output}</td>
+        <td className="px-4 py-3 text-xs text-gray-300 max-w-xs truncate">{result.actual_output || "—"}</td>
         <td className="px-4 py-3">
-          {result.hallucination_detected === null ? (
-            <span className="text-gray-700 text-xs">—</span>
-          ) : result.hallucination_detected ? (
-            <span className="flex items-center gap-1 text-red-400 text-xs"><AlertTriangle size={12} /> Yes</span>
-          ) : (
-            <span className="flex items-center gap-1 text-emerald-400 text-xs"><CheckCircle size={12} /> No</span>
-          )}
+          <HallucinationBadge detected={result.hallucination_detected} />
         </td>
-        <td className="px-4 py-3"><VerdictBadge verdict={result.judge_verdict} /></td>
-        <td className="px-4 py-3 text-xs text-gray-400 tabular-nums">
-          {result.factual_score !== null ? `${(result.factual_score * 100).toFixed(0)}%` : "—"}
+        <td className="px-4 py-3">
+          <VerdictBadge verdict={result.judge_verdict} />
+        </td>
+        <td className="px-4 py-3">
+          <FactualBadge score={result.factual_score} />
         </td>
         <td className="px-4 py-3 text-xs text-gray-500 tabular-nums">
           {result.latency_ms ? `${result.latency_ms}ms` : "—"}
@@ -94,7 +124,7 @@ function ResultRow({ result }: { result: EvalResult }) {
               <div>
                 <div className="text-gray-500 mb-1 font-medium">Full output</div>
                 <div className="text-gray-300 bg-gray-800 rounded-lg p-3 font-mono whitespace-pre-wrap leading-relaxed max-h-48 overflow-y-auto">
-                  {result.actual_output || "—"}
+                  {result.actual_output || "No output"}
                 </div>
               </div>
               <div className="space-y-3">
@@ -117,7 +147,7 @@ function ResultRow({ result }: { result: EvalResult }) {
                   </div>
                 )}
                 <div className="flex gap-4 text-gray-500">
-                  <span>Tokens: {result.tokens_used ?? "—"}</span>
+                  <span>Tokens: {result.tokens_used ?? 0}</span>
                   <span>Latency: {result.latency_ms ? `${result.latency_ms}ms` : "—"}</span>
                   {result.similarity_score != null && (
                     <span>Similarity: {((result.similarity_score) * 100).toFixed(1)}%</span>
@@ -149,6 +179,8 @@ export default function EvalRunDetailPage() {
     queryKey: ["eval-results", runId, filterVerdict],
     queryFn: () => evalRunsApi.results(runId, { verdict: filterVerdict || undefined, limit: 100 }),
     enabled: run?.status === "completed" || run?.status === "failed",
+    refetchOnMount: "always",
+    staleTime: 0,
   });
 
   useEffect(() => {
@@ -190,7 +222,7 @@ export default function EvalRunDetailPage() {
             <StatusBadge status={run.status} />
           </div>
           <div className="text-sm text-gray-500">
-            {run.eval_types.join(" · ")} · {run.total_rows} rows
+            {run.eval_types?.join(" · ")} · {run.total_rows} rows
           </div>
         </div>
         {run.status === "completed" && (
@@ -215,38 +247,22 @@ export default function EvalRunDetailPage() {
               style={{ width: `${progress}%` }}
             />
           </div>
-          {liveResults.length > 0 && (
-            <div className="mt-4 space-y-1 max-h-40 overflow-y-auto">
-              {liveResults.slice(-10).map((r, i) => (
-                <div key={i} className="flex items-center gap-3 text-xs">
-                  {r.hallucination === false
-                    ? <CheckCircle size={11} className="text-emerald-500 flex-shrink-0" />
-                    : r.hallucination === true
-                    ? <AlertTriangle size={11} className="text-red-500 flex-shrink-0" />
-                    : <div className="w-3 h-3 rounded-full bg-gray-700 flex-shrink-0" />}
-                  <span className="text-gray-400 truncate">{r.output}</span>
-                  <span className="text-gray-600 flex-shrink-0">{r.latency_ms}ms</span>
-                </div>
-              ))}
-            </div>
-          )}
         </div>
       )}
 
-      {run.status === "completed" && (
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-          {[
-            { label: "Overall",           value: run.overall_score },
-            { label: "Hallucination-free", value: run.hallucination_score },
-            { label: "Jailbreak resist.",  value: run.jailbreak_resistance_score },
-            { label: "Factual accuracy",   value: run.factual_accuracy_score },
-          ].map(({ label, value }) => (
-            <div key={label} className="bg-gray-900 rounded-xl border border-gray-800 p-5 text-center">
-              <ScoreCircle score={value} label={label} />
-            </div>
-          ))}
-        </div>
-      )}
+      {/* Score cards — always show, default to 0.0 */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+        {[
+          { label: "Overall",            value: run.overall_score },
+          { label: "Hallucination-free", value: run.hallucination_score },
+          { label: "Jailbreak resist.",  value: run.jailbreak_resistance_score },
+          { label: "Factual accuracy",   value: run.factual_accuracy_score },
+        ].map(({ label, value }) => (
+          <div key={label} className="bg-gray-900 rounded-xl border border-gray-800 p-5 text-center">
+            <ScoreCircle score={value} label={label} />
+          </div>
+        ))}
+      </div>
 
       {run.status === "failed" && run.error_message && (
         <div className="bg-red-900/20 border border-red-800 rounded-xl p-4 mb-6 text-sm text-red-300">
