@@ -1,6 +1,6 @@
 """
 Unified LLM Client — supports OpenAI, Anthropic, Ollama, and Groq
-Compatible with openai SDK v2.x (installed on Render)
+Uses httpx directly to avoid openai SDK version issues.
 """
 import asyncio
 import time
@@ -40,7 +40,6 @@ async def call_llm(
         elif endpoint.provider == "ollama" or (endpoint.base_url and "11434" in endpoint.base_url):
             return await _call_ollama(prompt, system_prompt, endpoint, start)
         else:
-            # OpenAI / Groq / any OpenAI-compatible API
             return await _call_openai_compat(prompt, system_prompt, endpoint, api_key, start)
     except Exception as e:
         latency_ms = int((time.monotonic() - start) * 1000)
@@ -49,12 +48,21 @@ async def call_llm(
 
 
 async def _call_openai_compat(prompt, system_prompt, endpoint, api_key, start) -> LLMResponse:
-    """
-    Calls any OpenAI-compatible API including Groq.
-    Uses httpx directly to avoid openai SDK version compatibility issues.
-    """
+    """Calls any OpenAI-compatible API using httpx directly."""
     base_url = endpoint.base_url.rstrip("/")
     url = f"{base_url}/chat/completions"
+
+    # Safety: ensure max_tokens is valid (between 1 and 8192)
+    max_tokens = endpoint.max_tokens or 1000
+    if max_tokens <= 0:
+        max_tokens = 1000
+    max_tokens = min(max_tokens, 8192)
+
+    # Safety: ensure temperature is valid
+    temperature = endpoint.temperature
+    if temperature is None or temperature < 0:
+        temperature = 0.1
+    temperature = min(float(temperature), 2.0)
 
     headers = {
         "Authorization": f"Bearer {api_key}",
@@ -67,18 +75,24 @@ async def _call_openai_compat(prompt, system_prompt, endpoint, api_key, start) -
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": prompt},
         ],
-        "temperature": endpoint.temperature,
-        "max_tokens": endpoint.max_tokens,
+        "temperature": temperature,
+        "max_tokens": max_tokens,
     }
+
+    print(f"  → POST {url} model={endpoint.model_name} max_tokens={max_tokens} temp={temperature}")
 
     async with httpx.AsyncClient(timeout=120.0) as client:
         response = await client.post(url, json=payload, headers=headers)
-        response.raise_for_status()
+
+        if response.status_code != 200:
+            error_body = response.text[:500]
+            print(f"  ← Error {response.status_code}: {error_body}")
+            response.raise_for_status()
+
         data = response.json()
 
     latency_ms = int((time.monotonic() - start) * 1000)
 
-    # Parse response — same format for OpenAI, Groq, Together, etc.
     choices = data.get("choices", [])
     content = ""
     if choices:
@@ -90,6 +104,8 @@ async def _call_openai_compat(prompt, system_prompt, endpoint, api_key, start) -
         usage.get("prompt_tokens", 0) + usage.get("completion_tokens", 0)
     )
 
+    print(f"  ← Success: content_len={len(content)} tokens={tokens}")
+
     return LLMResponse(
         content=content,
         latency_ms=latency_ms,
@@ -99,7 +115,6 @@ async def _call_openai_compat(prompt, system_prompt, endpoint, api_key, start) -
 
 
 async def _call_ollama(prompt, system_prompt, endpoint, start) -> LLMResponse:
-    """Call Ollama via its native API — no API key needed."""
     base = endpoint.base_url.rstrip("/").replace("/v1", "")
     url = f"{base}/api/chat"
 
@@ -107,8 +122,8 @@ async def _call_ollama(prompt, system_prompt, endpoint, start) -> LLMResponse:
         "model": endpoint.model_name,
         "stream": False,
         "options": {
-            "temperature": endpoint.temperature,
-            "num_predict": endpoint.max_tokens,
+            "temperature": endpoint.temperature or 0.1,
+            "num_predict": endpoint.max_tokens or 1000,
         },
         "messages": [
             {"role": "system", "content": system_prompt},
@@ -125,21 +140,16 @@ async def _call_ollama(prompt, system_prompt, endpoint, start) -> LLMResponse:
     content = data.get("message", {}).get("content", "")
     tokens = data.get("eval_count", 0) + data.get("prompt_eval_count", 0)
 
-    return LLMResponse(
-        content=content,
-        latency_ms=latency_ms,
-        tokens_used=tokens,
-        model=endpoint.model_name,
-    )
+    return LLMResponse(content=content, latency_ms=latency_ms,
+                       tokens_used=tokens, model=endpoint.model_name)
 
 
 async def _call_anthropic(prompt, system_prompt, endpoint, api_key, start) -> LLMResponse:
-    """Call Anthropic Claude API."""
     import anthropic
     client = anthropic.AsyncAnthropic(api_key=api_key)
     response = await client.messages.create(
         model=endpoint.model_name,
-        max_tokens=endpoint.max_tokens,
+        max_tokens=endpoint.max_tokens or 1000,
         system=system_prompt,
         messages=[{"role": "user", "content": prompt}],
     )
@@ -153,5 +163,4 @@ async def _call_anthropic(prompt, system_prompt, endpoint, api_key, start) -> LL
 
 
 async def call_llm_n_times(prompt, endpoint, n=3) -> list[LLMResponse]:
-    """Run same prompt N times concurrently — for self-consistency checks."""
     return await asyncio.gather(*[call_llm(prompt, endpoint) for _ in range(n)])
