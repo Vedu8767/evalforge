@@ -1,29 +1,27 @@
 "use client";
-import { useState, useRef } from "react";
+import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { datasetsApi } from "@/lib/api";
 import { toast } from "sonner";
-import { Plus, Upload, Trash2, Database, FileText, ChevronRight } from "lucide-react";
+import { Plus, Upload, Trash2, Database, ChevronDown, ChevronUp, Eye } from "lucide-react";
 import { clsx } from "clsx";
-import Link from "next/link";
 
-const DATASET_TYPES = [
-  { id: "qa", label: "Q&A", desc: "Prompt + expected answer pairs" },
-  { id: "factual", label: "Factual", desc: "Fact-check style prompts" },
-  { id: "jailbreak", label: "Jailbreak", desc: "Safety / adversarial prompts" },
-  { id: "custom", label: "Custom", desc: "Any prompt collection" },
-];
+const defaultForm = { name: "", description: "", type: "factual" };
+const DATASET_TYPES = ["factual", "qa", "jailbreak", "custom"];
 
 export default function DatasetsPage() {
   const qc = useQueryClient();
-  const fileRef = useRef<HTMLInputElement>(null);
-  const [showCreate, setShowCreate] = useState(false);
-  const [uploadTarget, setUploadTarget] = useState<string | null>(null);
-  const [newDs, setNewDs] = useState({ name: "", type: "qa", description: "" });
+  const [showForm, setShowForm] = useState(false);
+  const [form, setForm] = useState(defaultForm);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [uploading, setUploading] = useState<string | null>(null);
+  const [rowsData, setRowsData] = useState<Record<string, any[]>>({});
 
   const { data: datasets = [], isLoading } = useQuery({
     queryKey: ["datasets"],
     queryFn: datasetsApi.list,
+    refetchOnMount: "always",
+    staleTime: 0,
   });
 
   const createMutation = useMutation({
@@ -31,113 +29,146 @@ export default function DatasetsPage() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["datasets"] });
       toast.success("Dataset created!");
-      setShowCreate(false);
-      setNewDs({ name: "", type: "qa", description: "" });
+      setShowForm(false);
+      setForm(defaultForm);
     },
+    onError: () => toast.error("Failed to create dataset"),
   });
 
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file || !uploadTarget) return;
-    try {
-      const result = await datasetsApi.uploadCSV(uploadTarget, file);
-      toast.success(`Imported ${result.rows_created} rows`);
+  const deleteMutation = useMutation({
+    mutationFn: datasetsApi.delete || ((id: string) => Promise.resolve()),
+    onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["datasets"] });
-    } catch {
-      toast.error("Upload failed. Check your CSV columns.");
+      toast.success("Dataset deleted");
+    },
+    onError: () => toast.error("Failed to delete dataset"),
+  });
+
+  const handleUpload = async (datasetId: string, file: File) => {
+    // Validate CSV format before uploading
+    const text = await file.text();
+    const lines = text.trim().split("\n");
+    if (lines.length < 2) {
+      toast.error("CSV must have a header row and at least one data row");
+      return;
     }
-    if (fileRef.current) fileRef.current.value = "";
-    setUploadTarget(null);
+    const headers = lines[0].toLowerCase().split(",").map(h => h.trim().replace(/"/g, ""));
+    if (!headers.includes("input_prompt")) {
+      toast.error(`CSV must have an 'input_prompt' column. Found: ${headers.join(", ")}`);
+      return;
+    }
+
+    setUploading(datasetId);
+    try {
+      await datasetsApi.uploadCSV(datasetId, file);
+      qc.invalidateQueries({ queryKey: ["datasets"] });
+      toast.success(`Uploaded ${lines.length - 1} rows successfully!`);
+    } catch (e: any) {
+      toast.error(e?.response?.data?.detail || "Upload failed — check CSV format");
+    } finally {
+      setUploading(null);
+    }
+  };
+
+  const handleViewRows = async (datasetId: string) => {
+    if (expandedId === datasetId) {
+      setExpandedId(null);
+      return;
+    }
+    setExpandedId(datasetId);
+    if (!rowsData[datasetId]) {
+      try {
+        const rows = await datasetsApi.rows(datasetId, { limit: 5 });
+        setRowsData(prev => ({ ...prev, [datasetId]: rows }));
+      } catch {
+        toast.error("Failed to load rows");
+      }
+    }
   };
 
   return (
     <div className="p-8 max-w-5xl mx-auto">
+      {/* Header */}
       <div className="flex items-center justify-between mb-8">
         <div>
           <h1 className="text-2xl font-bold text-white">Datasets</h1>
-          <p className="text-gray-400 text-sm mt-1">Collections of prompts and expected outputs for evaluation</p>
+          <p className="text-gray-400 text-sm mt-1">
+            Upload CSV files with prompts to evaluate your LLMs
+          </p>
         </div>
         <button
-          onClick={() => setShowCreate(true)}
-          className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-medium"
+          onClick={() => setShowForm(!showForm)}
+          className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
         >
           <Plus size={16} /> New Dataset
         </button>
       </div>
 
       {/* CSV format hint */}
-      <div className="bg-gray-900 border border-gray-800 rounded-xl p-4 mb-6 text-xs text-gray-500">
-        <div className="flex items-center gap-2 mb-2 text-gray-400 font-medium">
-          <FileText size={13} /> CSV / JSONL format
+      <div className="bg-gray-900 border border-gray-800 rounded-xl p-4 mb-6 text-xs text-gray-400">
+        <div className="font-medium text-gray-300 mb-2">📋 CSV Format Required</div>
+        <div className="font-mono bg-gray-800 rounded-lg p-3 text-green-400">
+          input_prompt,expected_output,context<br/>
+          "What is the capital of France?","Paris",""<br/>
+          "Who wrote Hamlet?","Shakespeare",""
         </div>
-        <div className="font-mono bg-gray-800 rounded-lg p-3 text-gray-400">
-          input_prompt,expected_output,context,tags<br/>
-          "What is Python?","A programming language","","factual,easy"<br/>
-          "Capital of Japan?","Tokyo","",""
+        <div className="mt-2 text-gray-500">
+          Only <span className="text-indigo-400">input_prompt</span> is required.
+          {" "}<span className="text-gray-400">expected_output</span> and{" "}
+          <span className="text-gray-400">context</span> are optional.
         </div>
       </div>
 
       {/* Create form */}
-      {showCreate && (
+      {showForm && (
         <div className="bg-gray-900 rounded-xl border border-gray-800 p-6 mb-6">
-          <h2 className="text-sm font-semibold text-white mb-4">Create dataset</h2>
-          <div className="space-y-4">
+          <h2 className="text-sm font-semibold text-white mb-4">Create new dataset</h2>
+          <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="text-xs text-gray-400 block mb-1.5">Name</label>
+              <label className="text-xs text-gray-400 block mb-1.5">Dataset name *</label>
               <input
-                value={newDs.name}
-                onChange={(e) => setNewDs((d) => ({ ...d, name: e.target.value }))}
-                placeholder="e.g. Product FAQ Test Set"
+                value={form.name}
+                onChange={(e) => setForm(f => ({ ...f, name: e.target.value }))}
+                placeholder="General Knowledge QA"
                 className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500"
               />
             </div>
             <div>
               <label className="text-xs text-gray-400 block mb-1.5">Type</label>
-              <div className="grid grid-cols-2 gap-2">
-                {DATASET_TYPES.map((t) => (
-                  <button
-                    key={t.id}
-                    onClick={() => setNewDs((d) => ({ ...d, type: t.id }))}
-                    className={clsx(
-                      "text-left p-3 rounded-lg border text-xs transition-colors",
-                      newDs.type === t.id
-                        ? "border-indigo-500 bg-indigo-600/10 text-indigo-300"
-                        : "border-gray-700 text-gray-400 hover:border-gray-600"
-                    )}
-                  >
-                    <div className="font-medium">{t.label}</div>
-                    <div className="text-gray-600 mt-0.5">{t.desc}</div>
-                  </button>
+              <select
+                value={form.type}
+                onChange={(e) => setForm(f => ({ ...f, type: e.target.value }))}
+                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none"
+              >
+                {DATASET_TYPES.map(t => (
+                  <option key={t} value={t}>{t.charAt(0).toUpperCase() + t.slice(1)}</option>
                 ))}
-              </div>
+              </select>
             </div>
-            <div>
+            <div className="col-span-2">
               <label className="text-xs text-gray-400 block mb-1.5">Description (optional)</label>
               <input
-                value={newDs.description}
-                onChange={(e) => setNewDs((d) => ({ ...d, description: e.target.value }))}
-                placeholder="What this dataset tests..."
-                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none"
+                value={form.description}
+                onChange={(e) => setForm(f => ({ ...f, description: e.target.value }))}
+                placeholder="What is this dataset for?"
+                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500"
               />
             </div>
           </div>
-          <div className="flex gap-3 mt-5">
+          <div className="flex gap-3 mt-4">
             <button
-              onClick={() => createMutation.mutate(newDs)}
-              disabled={!newDs.name || createMutation.isPending}
+              onClick={() => createMutation.mutate(form)}
+              disabled={!form.name || createMutation.isPending}
               className="bg-indigo-600 hover:bg-indigo-700 disabled:opacity-40 text-white px-5 py-2 rounded-lg text-sm font-medium"
             >
               {createMutation.isPending ? "Creating..." : "Create dataset"}
             </button>
-            <button onClick={() => setShowCreate(false)} className="text-gray-400 hover:text-white text-sm px-3">
+            <button onClick={() => setShowForm(false)} className="text-gray-400 hover:text-white text-sm px-3">
               Cancel
             </button>
           </div>
         </div>
       )}
-
-      {/* Hidden file input */}
-      <input ref={fileRef} type="file" accept=".csv,.jsonl" className="hidden" onChange={handleFileUpload} />
 
       {/* Dataset list */}
       {isLoading ? (
@@ -146,38 +177,100 @@ export default function DatasetsPage() {
         <div className="bg-gray-900 rounded-xl border border-gray-800 p-12 text-center">
           <Database size={32} className="text-gray-700 mx-auto mb-3" />
           <p className="text-gray-500 text-sm">No datasets yet.</p>
-          <button onClick={() => setShowCreate(true)} className="text-indigo-400 text-sm hover:underline mt-1">
+          <button onClick={() => setShowForm(true)} className="text-indigo-400 text-sm hover:underline mt-1">
             Create your first dataset →
           </button>
         </div>
       ) : (
         <div className="space-y-3">
-          {datasets.map((ds) => (
-            <div key={ds.id} className="bg-gray-900 rounded-xl border border-gray-800 p-5 flex items-center justify-between gap-4">
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 mb-1">
-                  <span className="text-sm font-medium text-white">{ds.name}</span>
-                  <span className="text-xs bg-gray-800 text-gray-500 px-2 py-0.5 rounded-full">{ds.type}</span>
+          {datasets.map((d: any) => (
+            <div key={d.id} className="bg-gray-900 rounded-xl border border-gray-800">
+              <div className="p-5 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 bg-indigo-600/10 rounded-lg flex items-center justify-center">
+                    <Database size={16} className="text-indigo-400" />
+                  </div>
+                  <div>
+                    <div className="text-sm font-medium text-white">{d.name}</div>
+                    <div className="text-xs text-gray-500 mt-0.5">
+                      {d.type} · {d.row_count} rows
+                      {d.description && ` · ${d.description}`}
+                    </div>
+                  </div>
                 </div>
-                {ds.description && <div className="text-xs text-gray-500 mb-1">{ds.description}</div>}
-                <div className="text-xs text-gray-600">
-                  {ds.row_count} rows · Created {new Date(ds.created_at).toLocaleDateString()}
+                <div className="flex items-center gap-2">
+                  {/* View rows */}
+                  <button
+                    onClick={() => handleViewRows(d.id)}
+                    className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-white border border-gray-700 hover:border-gray-600 rounded-lg px-3 py-1.5 transition-colors"
+                  >
+                    <Eye size={12} />
+                    {expandedId === d.id ? "Hide" : "Preview"}
+                    {expandedId === d.id ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+                  </button>
+
+                  {/* Upload CSV */}
+                  <label className={clsx(
+                    "flex items-center gap-1.5 text-xs border rounded-lg px-3 py-1.5 transition-colors cursor-pointer",
+                    uploading === d.id
+                      ? "text-gray-600 border-gray-800"
+                      : "text-gray-400 hover:text-white border-gray-700 hover:border-gray-600"
+                  )}>
+                    <Upload size={12} />
+                    {uploading === d.id ? "Uploading..." : "Upload CSV"}
+                    <input
+                      type="file"
+                      accept=".csv"
+                      className="hidden"
+                      disabled={uploading === d.id}
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) handleUpload(d.id, file);
+                        e.target.value = "";
+                      }}
+                    />
+                  </label>
+
+                  {/* Delete */}
+                  <button
+                    onClick={() => deleteMutation.mutate(d.id)}
+                    className="text-gray-600 hover:text-red-400 p-1.5 rounded-lg transition-colors"
+                  >
+                    <Trash2 size={14} />
+                  </button>
                 </div>
               </div>
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => { setUploadTarget(ds.id); fileRef.current?.click(); }}
-                  className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-white border border-gray-700 hover:border-gray-600 rounded-lg px-3 py-1.5 transition-colors"
-                >
-                  <Upload size={12} /> Upload CSV
-                </button>
-                <Link
-                  href={`/datasets/${ds.id}`}
-                  className="flex items-center gap-1 text-xs text-gray-400 hover:text-white px-2 py-1.5"
-                >
-                  View rows <ChevronRight size={12} />
-                </Link>
-              </div>
+
+              {/* Row preview */}
+              {expandedId === d.id && (
+                <div className="border-t border-gray-800 p-4">
+                  {!rowsData[d.id] ? (
+                    <div className="text-gray-600 text-xs">Loading rows...</div>
+                  ) : rowsData[d.id].length === 0 ? (
+                    <div className="text-gray-600 text-xs">
+                      No rows yet. Upload a CSV to add data.
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      <div className="text-xs text-gray-500 mb-2">
+                        Showing first {rowsData[d.id].length} rows:
+                      </div>
+                      {rowsData[d.id].map((row: any, i: number) => (
+                        <div key={row.id || i} className="bg-gray-800 rounded-lg p-3 text-xs">
+                          <div className="text-gray-300 font-medium mb-1">
+                            Q: {row.input_prompt}
+                          </div>
+                          {row.expected_output && (
+                            <div className="text-gray-500">
+                              A: {row.expected_output}
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           ))}
         </div>
