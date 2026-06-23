@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { datasetsApi } from "@/lib/api";
+import { datasetsApi, api } from "@/lib/api";
 import { toast } from "sonner";
 import { Plus, Upload, Trash2, Database, ChevronDown, ChevronUp, Eye } from "lucide-react";
 import { clsx } from "clsx";
@@ -36,7 +36,7 @@ export default function DatasetsPage() {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: datasetsApi.delete || ((id: string) => Promise.resolve()),
+    mutationFn: (id: string) => api.delete(`/datasets/${id}`).then((r) => r.data),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["datasets"] });
       toast.success("Dataset deleted");
