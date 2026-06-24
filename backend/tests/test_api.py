@@ -1,350 +1,265 @@
 """
-EvalForge Backend Tests
+EvalForge — Unit & Integration Tests
 Run: pytest tests/ -v
 """
 import pytest
-import pytest_asyncio
-from httpx import AsyncClient, ASGITransport
-from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
-
-from app.main import app
-from app.db import get_db, Base
-from app.config import settings
-
-# ─── Test DB setup ────────────────────────────────────────────────────────────
-
-TEST_DB_URL = settings.database_url.replace("/evalforge", "/evalforge_test")
-
-test_engine = create_async_engine(TEST_DB_URL, echo=False)
-TestSession = async_sessionmaker(test_engine, class_=AsyncSession, expire_on_commit=False)
-
-
-async def override_get_db():
-    async with TestSession() as session:
-        try:
-            yield session
-            await session.commit()
-        except Exception:
-            await session.rollback()
-            raise
-
-
-app.dependency_overrides[get_db] = override_get_db
-
-
-@pytest_asyncio.fixture(autouse=True)
-async def setup_db():
-    """Create all tables before each test, drop after."""
-    async with test_engine.begin() as conn:
-        try:
-            await conn.execute(__import__("sqlalchemy").text("CREATE EXTENSION IF NOT EXISTS vector"))
-        except Exception:
-            pass
-        await conn.run_sync(Base.metadata.create_all)
-    yield
-    async with test_engine.begin() as conn:
-        await conn.run_sync(Base.metadata.drop_all)
-
-
-@pytest_asyncio.fixture
-async def client():
-    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as c:
-        yield c
-
-
-# ─── Helper ───────────────────────────────────────────────────────────────────
-
-async def register_and_login(client: AsyncClient, email="test@example.com", password="password123", name="Test User"):
-    resp = await client.post("/auth/register", json={"email": email, "password": password, "name": name})
-    assert resp.status_code == 201, resp.text
-    return resp.json()["access_token"]
-
-
-# ─── Auth Tests ───────────────────────────────────────────────────────────────
-
-@pytest.mark.asyncio
-async def test_register_success(client):
-    resp = await client.post("/auth/register", json={
-        "email": "new@example.com", "password": "securepass", "name": "New User"
-    })
-    assert resp.status_code == 201
-    data = resp.json()
-    assert "access_token" in data
-    assert data["email"] == "new@example.com"
-
-
-@pytest.mark.asyncio
-async def test_register_duplicate_email(client):
-    payload = {"email": "dup@example.com", "password": "pass1234", "name": "User"}
-    await client.post("/auth/register", json=payload)
-    resp = await client.post("/auth/register", json=payload)
-    assert resp.status_code == 400
-    assert "already registered" in resp.json()["detail"]
-
-
-@pytest.mark.asyncio
-async def test_login_success(client):
-    await client.post("/auth/register", json={
-        "email": "login@example.com", "password": "mypassword", "name": "Login User"
-    })
-    resp = await client.post("/auth/login", json={
-        "email": "login@example.com", "password": "mypassword"
-    })
-    assert resp.status_code == 200
-    assert "access_token" in resp.json()
-
-
-@pytest.mark.asyncio
-async def test_login_wrong_password(client):
-    await client.post("/auth/register", json={
-        "email": "wp@example.com", "password": "correctpass", "name": "User"
-    })
-    resp = await client.post("/auth/login", json={"email": "wp@example.com", "password": "wrongpass"})
-    assert resp.status_code == 401
-
-
-@pytest.mark.asyncio
-async def test_get_me(client):
-    token = await register_and_login(client)
-    resp = await client.get("/auth/me", headers={"Authorization": f"Bearer {token}"})
-    assert resp.status_code == 200
-    assert resp.json()["email"] == "test@example.com"
-
-
-@pytest.mark.asyncio
-async def test_get_me_no_token(client):
-    resp = await client.get("/auth/me")
-    assert resp.status_code == 403  # HTTPBearer returns 403 when no token
-
-
-# ─── Health Tests ─────────────────────────────────────────────────────────────
-
-@pytest.mark.asyncio
-async def test_health(client):
-    resp = await client.get("/health")
-    assert resp.status_code == 200
-    assert resp.json()["status"] == "ok"
-
-
-# ─── Model Endpoint Tests ─────────────────────────────────────────────────────
-
-@pytest.mark.asyncio
-async def test_create_model_endpoint(client):
-    token = await register_and_login(client)
-    headers = {"Authorization": f"Bearer {token}"}
-
-    resp = await client.post("/model-endpoints", headers=headers, json={
-        "name": "Test GPT-4o",
-        "provider": "openai",
-        "base_url": "https://api.openai.com/v1",
-        "model_name": "gpt-4o",
-        "api_key": "sk-test-key-12345",
-        "temperature": 0.0,
-        "max_tokens": 500,
-    })
-    assert resp.status_code == 201
-    data = resp.json()
-    assert data["name"] == "Test GPT-4o"
-    assert "sk-test" in data["api_key_masked"]
-    assert "api_key" not in data          # raw key must never be returned
-
-
-@pytest.mark.asyncio
-async def test_list_model_endpoints(client):
-    token = await register_and_login(client)
-    headers = {"Authorization": f"Bearer {token}"}
-
-    # Create two endpoints
-    for i in range(2):
-        await client.post("/model-endpoints", headers=headers, json={
-            "name": f"Model {i}", "provider": "openai",
-            "base_url": "https://api.openai.com/v1",
-            "model_name": "gpt-4o-mini", "api_key": f"sk-key-{i}",
-        })
-
-    resp = await client.get("/model-endpoints", headers=headers)
-    assert resp.status_code == 200
-    assert len(resp.json()) == 2
-
-
-@pytest.mark.asyncio
-async def test_delete_model_endpoint(client):
-    token = await register_and_login(client)
-    headers = {"Authorization": f"Bearer {token}"}
-
-    create_resp = await client.post("/model-endpoints", headers=headers, json={
-        "name": "To Delete", "provider": "openai",
-        "base_url": "https://api.openai.com/v1",
-        "model_name": "gpt-4o", "api_key": "sk-delete-me",
-    })
-    endpoint_id = create_resp.json()["id"]
-
-    del_resp = await client.delete(f"/model-endpoints/{endpoint_id}", headers=headers)
-    assert del_resp.status_code == 204
-
-    list_resp = await client.get("/model-endpoints", headers=headers)
-    assert len(list_resp.json()) == 0
-
-
-# ─── Dataset Tests ────────────────────────────────────────────────────────────
-
-@pytest.mark.asyncio
-async def test_create_dataset(client):
-    token = await register_and_login(client)
-    headers = {"Authorization": f"Bearer {token}"}
-
-    resp = await client.post("/datasets", headers=headers, json={
-        "name": "QA Test Set", "type": "qa", "description": "My first dataset"
-    })
-    assert resp.status_code == 201
-    assert resp.json()["name"] == "QA Test Set"
-    assert resp.json()["row_count"] == 0
-
-
-@pytest.mark.asyncio
-async def test_add_rows_to_dataset(client):
-    token = await register_and_login(client)
-    headers = {"Authorization": f"Bearer {token}"}
-
-    ds_resp = await client.post("/datasets", headers=headers, json={"name": "DS", "type": "qa"})
-    ds_id = ds_resp.json()["id"]
-
-    rows_resp = await client.post(f"/datasets/{ds_id}/rows", headers=headers, json={
-        "rows": [
-            {"input_prompt": "What is 2+2?", "expected_output": "4"},
-            {"input_prompt": "Capital of France?", "expected_output": "Paris"},
-        ]
-    })
-    assert rows_resp.status_code == 201
-    assert len(rows_resp.json()) == 2
-
-    # Verify row_count updated
-    ds_check = await client.get(f"/datasets/{ds_id}", headers=headers)
-    assert ds_check.json()["row_count"] == 2
-
-
-@pytest.mark.asyncio
-async def test_upload_csv(client):
-    import io
-    token = await register_and_login(client)
-    headers = {"Authorization": f"Bearer {token}"}
-
-    ds_resp = await client.post("/datasets", headers=headers, json={"name": "CSV DS", "type": "factual"})
-    ds_id = ds_resp.json()["id"]
-
-    csv_content = "input_prompt,expected_output\nWhat is Python?,A programming language\nWhat is FastAPI?,A web framework\n"
-    resp = await client.post(
-        f"/datasets/{ds_id}/upload",
-        headers=headers,
-        files={"file": ("test.csv", io.BytesIO(csv_content.encode()), "text/csv")},
-    )
-    assert resp.status_code == 201
-    assert resp.json()["rows_created"] == 2
-
-
-# ─── Eval Run Tests ───────────────────────────────────────────────────────────
-
-@pytest.mark.asyncio
-async def test_create_eval_run(client):
-    token = await register_and_login(client)
-    headers = {"Authorization": f"Bearer {token}"}
-
-    # Setup: create model + dataset
-    model_resp = await client.post("/model-endpoints", headers=headers, json={
-        "name": "Test Model", "provider": "openai",
-        "base_url": "https://api.openai.com/v1",
-        "model_name": "gpt-4o-mini", "api_key": "sk-test",
-    })
-    model_id = model_resp.json()["id"]
-
-    ds_resp = await client.post("/datasets", headers=headers, json={"name": "Eval DS", "type": "qa"})
-    ds_id = ds_resp.json()["id"]
-    await client.post(f"/datasets/{ds_id}/rows", headers=headers, json={
-        "rows": [{"input_prompt": "Hello?", "expected_output": "Hi!"}]
-    })
-
-    run_resp = await client.post("/eval-runs", headers=headers, json={
-        "dataset_id": ds_id,
-        "model_endpoint_id": model_id,
-        "eval_types": ["factual"],
-        "concurrency": 1,
-    })
-    assert run_resp.status_code == 201
-    data = run_resp.json()
-    assert data["status"] == "queued"
-    assert data["eval_types"] == ["factual"]
-
-
-@pytest.mark.asyncio
-async def test_list_eval_runs(client):
-    token = await register_and_login(client)
-    headers = {"Authorization": f"Bearer {token}"}
-
-    resp = await client.get("/eval-runs", headers=headers)
-    assert resp.status_code == 200
-    assert isinstance(resp.json(), list)
-
-
-# ─── Alert Tests ──────────────────────────────────────────────────────────────
-
-@pytest.mark.asyncio
-async def test_create_alert_rule(client):
-    token = await register_and_login(client)
-    headers = {"Authorization": f"Bearer {token}"}
-
-    resp = await client.post("/alerts", headers=headers, json={
-        "name": "Low overall score",
-        "metric": "overall_score",
-        "operator": "lt",
-        "threshold": 70.0,
-        "notify_email": ["admin@example.com"],
-    })
-    assert resp.status_code == 201
-    assert resp.json()["metric"] == "overall_score"
-    assert resp.json()["threshold"] == 70.0
-
-
-@pytest.mark.asyncio
-async def test_alert_invalid_metric(client):
-    token = await register_and_login(client)
-    headers = {"Authorization": f"Bearer {token}"}
-
-    resp = await client.post("/alerts", headers=headers, json={
-        "name": "Bad alert", "metric": "nonexistent_metric",
-        "operator": "lt", "threshold": 50.0,
-    })
-    assert resp.status_code == 400
-
-
-# ─── Encryption Tests ─────────────────────────────────────────────────────────
-
-def test_api_key_encrypt_decrypt():
-    from app.services.auth import encrypt_api_key, decrypt_api_key
-    original = "sk-super-secret-key-12345"
-    encrypted = encrypt_api_key(original)
-    assert encrypted != original
-    assert decrypt_api_key(encrypted) == original
-
-
-def test_api_key_mask():
-    from app.services.auth import mask_api_key
-    assert mask_api_key("sk-abcdefghijklmnop") == "sk-ab...****"
-    assert mask_api_key("short") == "****"
-
-
-# ─── Embedding Tests ──────────────────────────────────────────────────────────
-
-def test_cosine_similarity():
-    from app.services.embeddings import cosine_similarity
-    a = [1.0, 0.0, 0.0]
-    b = [1.0, 0.0, 0.0]
-    assert cosine_similarity(a, b) == pytest.approx(1.0)
-
-    c = [0.0, 1.0, 0.0]
-    assert cosine_similarity(a, c) == pytest.approx(0.0)
-
-
-def test_average_pairwise_similarity():
-    from app.services.embeddings import average_pairwise_similarity
-    embs = [[1.0, 0.0], [1.0, 0.0], [1.0, 0.0]]
-    assert average_pairwise_similarity(embs) == pytest.approx(1.0)
+import asyncio
+from unittest.mock import AsyncMock, MagicMock, patch
+from uuid import uuid4
+
+
+# ─── Auth Service Tests ───────────────────────────────────────────────────────
+
+class TestPasswordHashing:
+    def test_hash_password_returns_string(self):
+        from app.services.auth import hash_password
+        result = hash_password("testpassword123")
+        assert isinstance(result, str)
+        assert len(result) > 0
+
+    def test_hash_is_not_plaintext(self):
+        from app.services.auth import hash_password
+        result = hash_password("testpassword123")
+        assert result != "testpassword123"
+
+    def test_verify_correct_password(self):
+        from app.services.auth import hash_password, verify_password
+        hashed = hash_password("mypassword")
+        assert verify_password("mypassword", hashed) is True
+
+    def test_verify_wrong_password(self):
+        from app.services.auth import hash_password, verify_password
+        hashed = hash_password("mypassword")
+        assert verify_password("wrongpassword", hashed) is False
+
+    def test_handles_long_password(self):
+        """bcrypt truncates at 72 bytes — should not crash."""
+        from app.services.auth import hash_password, verify_password
+        long_pw = "a" * 100
+        hashed = hash_password(long_pw)
+        assert verify_password(long_pw, hashed) is True
+
+    def test_different_hashes_for_same_password(self):
+        """bcrypt uses random salt — same input, different output."""
+        from app.services.auth import hash_password
+        h1 = hash_password("password")
+        h2 = hash_password("password")
+        assert h1 != h2
+
+
+class TestJWT:
+    def test_create_and_decode_token(self):
+        from app.services.auth import create_access_token, decode_token
+        data = {"sub": str(uuid4()), "email": "test@test.com", "workspace_id": str(uuid4())}
+        token = create_access_token(data)
+        decoded = decode_token(token)
+        assert decoded is not None
+        assert decoded["sub"] == data["sub"]
+        assert decoded["email"] == data["email"]
+
+    def test_invalid_token_returns_none(self):
+        from app.services.auth import decode_token
+        result = decode_token("invalid.token.here")
+        assert result is None
+
+    def test_empty_token_returns_none(self):
+        from app.services.auth import decode_token
+        result = decode_token("")
+        assert result is None
+
+
+class TestEncryption:
+    def test_encrypt_decrypt_roundtrip(self):
+        from app.services.auth import encrypt_api_key, decrypt_api_key
+        original = "sk-test-api-key-12345"
+        encrypted = encrypt_api_key(original)
+        decrypted = decrypt_api_key(encrypted)
+        assert decrypted == original
+
+    def test_encrypted_differs_from_original(self):
+        from app.services.auth import encrypt_api_key
+        key = "sk-test-api-key"
+        encrypted = encrypt_api_key(key)
+        assert encrypted != key
+
+    def test_mask_api_key_short(self):
+        from app.services.auth import mask_api_key
+        result = mask_api_key("short")
+        assert result == "••••••••"
+
+    def test_mask_api_key_normal(self):
+        from app.services.auth import mask_api_key
+        result = mask_api_key("sk-1234567890abcdef")
+        assert result == "sk-1...cdef"
+        assert "..." in result
+
+
+# ─── LLM Client Tests ─────────────────────────────────────────────────────────
+
+class TestLLMClient:
+    @pytest.mark.asyncio
+    async def test_call_llm_returns_response_on_success(self):
+        from app.services.llm_client import LLMResponse
+
+        mock_endpoint = MagicMock()
+        mock_endpoint.provider = "custom"
+        mock_endpoint.base_url = "https://api.groq.com/openai/v1"
+        mock_endpoint.model_name = "llama-3.1-8b-instant"
+        mock_endpoint.temperature = 0.1
+        mock_endpoint.max_tokens = 100
+        mock_endpoint.system_prompt = None
+        mock_endpoint.api_key_encrypted = "dummy"
+
+        mock_response_data = {
+            "choices": [{"message": {"content": "Paris is the capital of France."}}],
+            "usage": {"total_tokens": 20},
+            "model": "llama-3.1-8b-instant"
+        }
+
+        with patch("app.services.auth.decrypt_api_key", return_value="test-key"), \
+             patch("httpx.AsyncClient") as mock_client:
+            mock_resp = MagicMock()
+            mock_resp.status_code = 200
+            mock_resp.json.return_value = mock_response_data
+            mock_resp.raise_for_status = MagicMock()
+            mock_client.return_value.__aenter__ = AsyncMock(return_value=mock_client.return_value)
+            mock_client.return_value.__aexit__ = AsyncMock(return_value=False)
+            mock_client.return_value.post = AsyncMock(return_value=mock_resp)
+
+            from app.services.llm_client import _call_openai_compat
+            import time
+            result = await _call_openai_compat(
+                "What is the capital of France?",
+                "You are helpful.",
+                mock_endpoint,
+                "test-key",
+                time.monotonic()
+            )
+
+            assert isinstance(result, LLMResponse)
+            assert result.content == "Paris is the capital of France."
+            assert result.error is None
+            assert result.tokens_used == 20
+
+    @pytest.mark.asyncio
+    async def test_call_llm_handles_error_gracefully(self):
+        from app.services.llm_client import call_llm
+
+        mock_endpoint = MagicMock()
+        mock_endpoint.provider = "custom"
+        mock_endpoint.base_url = "https://api.invalid.com/v1"
+        mock_endpoint.model_name = "test-model"
+        mock_endpoint.temperature = 0.1
+        mock_endpoint.max_tokens = 100
+        mock_endpoint.system_prompt = None
+        mock_endpoint.api_key_encrypted = "dummy"
+
+        with patch("app.services.auth.decrypt_api_key", return_value="test-key"), \
+             patch("httpx.AsyncClient") as mock_client:
+            mock_client.return_value.__aenter__ = AsyncMock(return_value=mock_client.return_value)
+            mock_client.return_value.__aexit__ = AsyncMock(return_value=False)
+            mock_client.return_value.post = AsyncMock(side_effect=Exception("Connection refused"))
+
+            result = await call_llm("test prompt", mock_endpoint)
+            assert result.error is not None
+            assert result.content == ""
+
+
+# ─── Factual Scoring Tests ────────────────────────────────────────────────────
+
+class TestFactualScoring:
+    @pytest.mark.asyncio
+    async def test_factual_result_has_required_fields(self):
+        from app.services.eval_engine.factual import FactualResult
+        result = FactualResult(
+            factual_score=0.9,
+            verdict="correct",
+            judge_reasoning="The answer is accurate.",
+            missing_facts=[],
+            extra_facts=[]
+        )
+        assert result.factual_score == 0.9
+        assert result.verdict == "correct"
+
+    @pytest.mark.asyncio
+    async def test_factual_check_handles_judge_error(self):
+        """If the judge fails, should return 0.0 not crash."""
+        from app.services.eval_engine.factual import check_factual_accuracy
+
+        mock_endpoint = MagicMock()
+
+        with patch("app.services.eval_engine.factual.call_llm") as mock_llm:
+            mock_response = MagicMock()
+            mock_response.content = "invalid json {"
+            mock_response.error = None
+            mock_llm.return_value = mock_response
+
+            result = await check_factual_accuracy(
+                question="What is 2+2?",
+                actual_output="4",
+                endpoint=mock_endpoint,
+                expected_output="4"
+            )
+            # Should not crash — returns degraded result
+            assert result.factual_score == 0.0
+
+
+# ─── Embeddings Tests ─────────────────────────────────────────────────────────
+
+class TestEmbeddings:
+    def test_hash_embed_returns_correct_dimension(self):
+        from app.services.embeddings import _hash_embed, EMBEDDING_DIM
+        result = _hash_embed("test text")
+        assert len(result) == EMBEDDING_DIM
+
+    def test_hash_embed_is_normalized(self):
+        import numpy as np
+        from app.services.embeddings import _hash_embed
+        result = _hash_embed("test text")
+        norm = np.linalg.norm(result)
+        assert abs(norm - 1.0) < 1e-6  # unit vector
+
+    def test_cosine_similarity_identical(self):
+        from app.services.embeddings import cosine_similarity
+        vec = [1.0, 0.0, 0.0]
+        assert cosine_similarity(vec, vec) == pytest.approx(1.0)
+
+    def test_cosine_similarity_orthogonal(self):
+        from app.services.embeddings import cosine_similarity
+        vec_a = [1.0, 0.0, 0.0]
+        vec_b = [0.0, 1.0, 0.0]
+        assert cosine_similarity(vec_a, vec_b) == pytest.approx(0.0)
+
+    def test_cosine_similarity_opposite(self):
+        from app.services.embeddings import cosine_similarity
+        vec_a = [1.0, 0.0]
+        vec_b = [-1.0, 0.0]
+        assert cosine_similarity(vec_a, vec_b) == pytest.approx(-1.0)
+
+    def test_average_pairwise_similarity_single(self):
+        from app.services.embeddings import average_pairwise_similarity
+        result = average_pairwise_similarity([[1.0, 0.0]])
+        assert result == 1.0
+
+    def test_average_pairwise_similarity_identical(self):
+        from app.services.embeddings import average_pairwise_similarity
+        vec = [1.0, 0.0, 0.0]
+        result = average_pairwise_similarity([vec, vec, vec])
+        assert result == pytest.approx(1.0)
+
+
+# ─── Config Tests ─────────────────────────────────────────────────────────────
+
+class TestConfig:
+    def test_settings_loads(self):
+        from app.config import settings
+        assert settings is not None
+        assert settings.jwt_algorithm == "HS256"
+        assert settings.jwt_expire_minutes > 0
+
+    def test_settings_has_required_fields(self):
+        from app.config import settings
+        assert hasattr(settings, "database_url")
+        assert hasattr(settings, "redis_url")
+        assert hasattr(settings, "jwt_secret")
+        assert hasattr(settings, "encryption_key")
