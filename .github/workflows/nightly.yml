@@ -32,10 +32,3 @@ jobs:
             exit 1
           fi
           echo "✅ Frontend is healthy"
-
-      - name: Notify on failure
-        if: failure()
-        run: |
-          curl -X POST ${{ secrets.SLACK_WEBHOOK_URL }} \
-            -H "Content-Type: application/json" \
-            -d '{"text":"🚨 EvalForge nightly health check FAILED — check Railway + Vercel dashboards"}'
