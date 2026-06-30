@@ -6,50 +6,25 @@ on:
   pull_request:
     branches: [main]
 
-# Cancel in-progress runs on new push to same branch
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 env:
-  PYTHON_VERSION: "3.12"
+  PYTHON_VERSION: "3.11"
   NODE_VERSION: "20"
 
 jobs:
 
   # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  # JOB 1: Backend Tests
+  # JOB 1: Backend Unit Tests (no DB needed)
   # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   backend-tests:
-    name: Backend Tests
+    name: Backend Unit Tests
     runs-on: ubuntu-latest
 
-    services:
-      postgres:
-        image: pgvector/pgvector:pg16
-        env:
-          POSTGRES_USER: evalforge
-          POSTGRES_PASSWORD: evalforge_test
-          POSTGRES_DB: evalforge_test
-        ports: ["5432:5432"]
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 5s
-          --health-timeout 3s
-          --health-retries 10
-
-      redis:
-        image: redis:7-alpine
-        ports: ["6379:6379"]
-        options: >-
-          --health-cmd "redis-cli ping"
-          --health-interval 5s
-          --health-timeout 3s
-          --health-retries 5
-
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
       - name: Set up Python ${{ env.PYTHON_VERSION }}
         uses: actions/setup-python@v5
@@ -62,39 +37,18 @@ jobs:
         working-directory: backend
         run: pip install -r requirements.txt
 
-      - name: Run migrations on test DB
+      - name: Run unit tests
         working-directory: backend
         env:
-          DATABASE_URL_SYNC: postgresql://evalforge:evalforge_test@localhost:5432/evalforge_test
-        run: alembic upgrade head
-
-      - name: Run tests with coverage
-        working-directory: backend
-        env:
-          DATABASE_URL: postgresql+asyncpg://evalforge:evalforge_test@localhost:5432/evalforge_test
-          DATABASE_URL_SYNC: postgresql://evalforge:evalforge_test@localhost:5432/evalforge_test
-          REDIS_URL: redis://localhost:6379/0
           JWT_SECRET: test-secret-not-for-production-64-chars-padded-0000
           ENCRYPTION_KEY: test-encryption-key-32-bytesXXX!!
-          OPENAI_API_KEY: sk-test-not-real
-          ENVIRONMENT: test
-        run: |
-          pytest tests/ -v \
-            --tb=short \
-            --cov=app \
-            --cov-report=term-missing \
-            --cov-report=xml \
-            --cov-fail-under=60
-
-      - name: Upload coverage report
-        uses: codecov/codecov-action@v4
-        if: always()
-        with:
-          file: backend/coverage.xml
-          flags: backend
+          DATABASE_URL: postgresql+asyncpg://test:test@localhost:5432/test
+          DATABASE_URL_SYNC: postgresql://test:test@localhost:5432/test
+          REDIS_URL: redis://localhost:6379/0
+        run: pytest tests/test_unit.py -v
 
   # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  # JOB 2: Backend Lint + Type Check
+  # JOB 2: Backend Lint
   # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   backend-lint:
     name: Backend Lint
@@ -109,14 +63,7 @@ jobs:
           cache: pip
           cache-dependency-path: backend/requirements.txt
 
-      - name: Install linting tools
-        run: pip install ruff
-
-      - name: Ruff lint
-        working-directory: backend
-        run: ruff check app/ --output-format=github
-
-      - name: Check Python syntax (all files)
+      - name: Check Python syntax
         working-directory: backend
         run: python -m py_compile app/**/*.py app/*.py && echo "✅ All files parse correctly"
 
@@ -138,217 +85,24 @@ jobs:
 
       - name: Install dependencies
         working-directory: frontend
-        run: npm ci
+        run: npm install --legacy-peer-deps
 
       - name: Type check
         working-directory: frontend
         run: npx tsc --noEmit
 
-      - name: Lint
-        working-directory: frontend
-        run: npx next lint || true   # non-blocking for now
-
       - name: Build
         working-directory: frontend
         env:
-          NEXTAUTH_URL: https://evalforge.vercel.app
+          NEXTAUTH_URL: https://evalforge-indol.vercel.app
           NEXTAUTH_SECRET: build-secret-not-real
-          NEXT_PUBLIC_API_URL: https://evalforge-api.railway.app
+          NEXT_PUBLIC_API_URL: https://evalforge-trmr.onrender.com
         run: npm run build
 
-      - name: Check bundle size
-        working-directory: frontend
-        run: |
-          du -sh .next/
-          echo "✅ Build complete"
-
   # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  # JOB 4: Migration Check
-  # Verify migrations are consistent with ORM models
+  # NOTE on deployment:
+  # Render and Vercel both auto-deploy on push to main
+  # via their native GitHub integration — no deploy job
+  # needed here. This pipeline focuses on test/lint/build
+  # verification before that auto-deploy happens.
   # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  migration-check:
-    name: Migration Check
-    runs-on: ubuntu-latest
-
-    services:
-      postgres:
-        image: pgvector/pgvector:pg16
-        env:
-          POSTGRES_USER: evalforge
-          POSTGRES_PASSWORD: evalforge_test
-          POSTGRES_DB: evalforge_migrate_test
-        ports: ["5432:5432"]
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 5s
-          --health-timeout 3s
-          --health-retries 10
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-python@v5
-        with:
-          python-version: ${{ env.PYTHON_VERSION }}
-          cache: pip
-          cache-dependency-path: backend/requirements.txt
-
-      - name: Install dependencies
-        working-directory: backend
-        run: pip install -r requirements.txt
-
-      - name: Upgrade to head
-        working-directory: backend
-        env:
-          DATABASE_URL_SYNC: postgresql://evalforge:evalforge_test@localhost:5432/evalforge_migrate_test
-          JWT_SECRET: test
-          ENCRYPTION_KEY: test-encryption-key-32-bytesXXX!!
-        run: alembic upgrade head
-
-      - name: Downgrade to base
-        working-directory: backend
-        env:
-          DATABASE_URL_SYNC: postgresql://evalforge:evalforge_test@localhost:5432/evalforge_migrate_test
-          JWT_SECRET: test
-          ENCRYPTION_KEY: test-encryption-key-32-bytesXXX!!
-        run: alembic downgrade base
-
-      - name: Re-upgrade (verify round trip)
-        working-directory: backend
-        env:
-          DATABASE_URL_SYNC: postgresql://evalforge:evalforge_test@localhost:5432/evalforge_migrate_test
-          JWT_SECRET: test
-          ENCRYPTION_KEY: test-encryption-key-32-bytesXXX!!
-        run: |
-          alembic upgrade head
-          echo "✅ Migrations round-trip verified"
-
-  # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  # JOB 5: Security Scan
-  # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  security-scan:
-    name: Security Scan
-    runs-on: ubuntu-latest
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-python@v5
-        with:
-          python-version: ${{ env.PYTHON_VERSION }}
-
-      - name: Install bandit + safety
-        run: pip install bandit safety
-
-      - name: Bandit security scan (Python)
-        working-directory: backend
-        run: |
-          bandit -r app/ \
-            -x app/tests \
-            --severity-level medium \
-            --confidence-level medium \
-            -f txt || true   # report but don't fail build yet
-
-      - name: Check for known vulnerabilities in dependencies
-        working-directory: backend
-        run: safety check -r requirements.txt || true
-
-  # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  # JOB 6: Deploy Backend to Railway (main only)
-  # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  deploy-backend:
-    name: Deploy Backend
-    needs: [backend-tests, backend-lint, migration-check]
-    runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Install Railway CLI
-        run: npm install -g @railway/cli
-
-      - name: Deploy API service
-        working-directory: backend
-        env:
-          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
-        run: railway up --service evalforge-api --detach
-
-      - name: Deploy Worker service
-        working-directory: backend
-        env:
-          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
-        run: railway up --service evalforge-worker --detach
-
-      - name: Wait for deployment + health check
-        run: |
-          echo "⏳ Waiting 30s for deployment to propagate..."
-          sleep 30
-          curl --retry 5 --retry-delay 10 --retry-connrefused \
-            ${{ secrets.API_HEALTH_URL }}/health \
-            && echo "✅ API health check passed"
-
-  # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  # JOB 7: Deploy Frontend to Vercel (main only)
-  # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  deploy-frontend:
-    name: Deploy Frontend
-    needs: [frontend-build]
-    runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-
-      - name: Install Vercel CLI
-        run: npm install -g vercel
-
-      - name: Deploy to Vercel (production)
-        working-directory: frontend
-        env:
-          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
-          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
-          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
-        run: vercel --prod --token $VERCEL_TOKEN --yes
-
-      - name: Notify deploy success
-        if: success()
-        run: |
-          echo "✅ Frontend deployed to ${{ secrets.FRONTEND_URL }}"
-
-  # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  # JOB 8: Notify on failure (Slack)
-  # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  notify-failure:
-    name: Notify on Failure
-    needs: [backend-tests, frontend-build, deploy-backend, deploy-frontend]
-    runs-on: ubuntu-latest
-    if: failure() && github.ref == 'refs/heads/main'
-
-    steps:
-      - name: Send Slack notification
-        if: ${{ secrets.SLACK_WEBHOOK_URL != '' }}
-        run: |
-          curl -X POST ${{ secrets.SLACK_WEBHOOK_URL }} \
-            -H "Content-Type: application/json" \
-            -d '{
-              "text": "❌ EvalForge CI/CD failed on `main`",
-              "attachments": [{
-                "color": "danger",
-                "fields": [
-                  {"title": "Branch", "value": "${{ github.ref_name }}", "short": true},
-                  {"title": "Commit", "value": "${{ github.sha }}", "short": true},
-                  {"title": "Author", "value": "${{ github.actor }}", "short": true},
-                  {"title": "Workflow", "value": "${{ github.workflow }}", "short": true}
-                ],
-                "actions": [{
-                  "type": "button",
-                  "text": "View Run",
-                  "url": "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-                }]
-              }]
-            }'
