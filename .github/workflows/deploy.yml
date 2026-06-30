@@ -48,7 +48,7 @@ jobs:
         run: pytest tests/test_unit.py -v
 
   # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  # JOB 2: Backend Lint
+  # JOB 2: Backend Lint (no pip cache — installs deps first)
   # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   backend-lint:
     name: Backend Lint
@@ -60,8 +60,10 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: ${{ env.PYTHON_VERSION }}
-          cache: pip
-          cache-dependency-path: backend/requirements.txt
+
+      - name: Install dependencies
+        working-directory: backend
+        run: pip install -r requirements.txt
 
       - name: Check Python syntax
         working-directory: backend
