@@ -2,7 +2,7 @@
 
 > Automatically test your LLMs for hallucination, jailbreak vulnerabilities, and factual accuracy before shipping to production.
 
-![EvalForge Dashboard](screenshot.png)
+![EvalForge Dashboard](image.png)
 
 [![Live Demo](https://img.shields.io/badge/Live%20Demo-evalforge--indol.vercel.app-indigo?style=flat-square)](https://evalforge-indol.vercel.app)
 [![GitHub](https://img.shields.io/badge/GitHub-Vedu8767%2Fevalforge-gray?style=flat-square&logo=github)](https://github.com/Vedu8767/evalforge)
