@@ -2,24 +2,44 @@
 import { SessionProvider, useSession } from "next-auth/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "sonner";
-import { useState, useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
 
 function QueryClientResetOnUserChange({ children, queryClient }: { children: React.ReactNode; queryClient: QueryClient }) {
-  const { data: session } = useSession();
-  const [lastUserId, setLastUserId] = useState<string | undefined>(undefined);
+  const { data: session, status } = useSession();
+  // Refs (not state) so we always compare against the true previous value,
+  // even across the intermediate "logged out" render that happens between
+  // two different accounts logging in one after another.
+  const lastUserIdRef = useRef<string | null>(null);
+  const initializedRef = useRef(false);
 
   useEffect(() => {
-    const currentUserId = (session?.user as any)?.id || session?.user?.email;
+    // Don't act on the transient "loading" status — wait for a settled
+    // authenticated/unauthenticated state so we don't clear on every
+    // background session re-check.
+    if (status === "loading") return;
 
-    // If the logged-in user changed (different account), clear ALL cached
-    // query data immediately. Without this, switching accounts can briefly
-    // show the previous user's cached dashboard/eval-runs/models data
-    // until each individual query happens to refetch on its own.
-    if (lastUserId !== undefined && currentUserId !== lastUserId) {
-      queryClient.clear();
+    const currentUserId =
+      status === "authenticated"
+        ? (session?.user as any)?.id ?? session?.user?.email ?? null
+        : null;
+
+    if (!initializedRef.current) {
+      // First settled render after page load — just record it, nothing to
+      // clear yet.
+      lastUserIdRef.current = currentUserId;
+      initializedRef.current = true;
+      return;
     }
-    setLastUserId(currentUserId);
-  }, [session, lastUserId, queryClient]);
+
+    // Fires for EVERY transition: user A -> logout (null) -> user B, not
+    // just a direct A -> B switch. This is the case the old undefined-check
+    // logic missed, which is exactly why a second account kept seeing the
+    // first account's cached dashboard/eval-runs/chart data.
+    if (currentUserId !== lastUserIdRef.current) {
+      queryClient.clear();
+      lastUserIdRef.current = currentUserId;
+    }
+  }, [session, status, queryClient]);
 
   return <>{children}</>;
 }
