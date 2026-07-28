@@ -16,8 +16,9 @@ const handler = NextAuth({
       },
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) return null;
+        let res: Response;
         try {
-          const res = await fetch(
+          res = await fetch(
             `${process.env.NEXT_PUBLIC_API_URL}/auth/login`,
             {
               method: "POST",
@@ -28,17 +29,27 @@ const handler = NextAuth({
               }),
             }
           );
-          if (!res.ok) return null;
-          const data = await res.json();
-          return {
-            id: data.user_id,
-            email: data.email,
-            name: data.name,
-            accessToken: data.access_token,
-          };
         } catch {
-          return null;
+          // Backend unreachable entirely (down, wrong URL, network error).
+          // Throwing here (instead of returning null) lets the login page
+          // show a specific message instead of "invalid credentials".
+          throw new Error("backend_unreachable");
         }
+        // 401 from our own /auth/login = genuinely wrong email/password.
+        if (res.status === 401) return null;
+        // Anything else (404 = wrong URL/stale deploy, 500 = server error,
+        // etc.) is NOT a credentials problem — surface it distinctly so it
+        // doesn't get shown to the user as "wrong password" when it isn't.
+        if (!res.ok) {
+          throw new Error(`backend_error_${res.status}`);
+        }
+        const data = await res.json();
+        return {
+          id: data.user_id,
+          email: data.email,
+          name: data.name,
+          accessToken: data.access_token,
+        };
       },
     }),
   ],
