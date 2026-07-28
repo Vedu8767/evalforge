@@ -85,6 +85,29 @@ const handler = NextAuth({
   },
   session: { strategy: "jwt" },
   secret: process.env.NEXTAUTH_SECRET,
+  // Explicit cookie config. Without this, NextAuth decides the cookie name
+  // (plain "next-auth.session-token" vs "__Secure-next-auth.session-token")
+  // based on auto-detecting the request protocol on every request. On
+  // Vercel that detection can be inconsistent across the login request and
+  // the logout request, so logout can end up clearing a DIFFERENT cookie
+  // name than the one login just set — leaving a stale, unclearable
+  // session cookie behind that makes the next login attempt look like it
+  // silently fails. Forcing this explicitly off NODE_ENV removes the
+  // ambiguity entirely.
+  cookies: {
+    sessionToken: {
+      name:
+        process.env.NODE_ENV === "production"
+          ? "__Secure-next-auth.session-token"
+          : "next-auth.session-token",
+      options: {
+        httpOnly: true,
+        sameSite: "lax",
+        path: "/",
+        secure: process.env.NODE_ENV === "production",
+      },
+    },
+  },
 });
 
 export { handler as GET, handler as POST };
