@@ -43,7 +43,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   if (!session) return null;
 
   const handleSignOut = async () => {
-    await signOut({ callbackUrl: "/login" });
+    // redirect: false + manual router.push, rather than signOut's own
+    // callbackUrl redirect. Letting NextAuth do a full-page redirect at the
+    // same moment the "unauthenticated" useEffect above fires router.push
+    // created a navigation race that could leave the session cookie half
+    // -cleared in production, which is what broke logging back in.
+    await signOut({ redirect: false });
+    router.push("/login");
   };
 
   return (
