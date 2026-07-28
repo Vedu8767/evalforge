@@ -19,7 +19,7 @@ export default function LoginPage() {
         const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/register`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(form),
+          body: JSON.stringify(form),z
         });
         if (!res.ok) {
           const err = await res.json();
@@ -39,7 +39,19 @@ export default function LoginPage() {
           password: form.password,
           redirect: false,
         });
-        if (res?.error) throw new Error("Invalid credentials");
+        if (res?.error) {
+          if (res.error === "CredentialsSignin") {
+            // Genuinely wrong email/password (backend returned 401).
+            throw new Error("Incorrect email or password.");
+          } else if (res.error === "backend_unreachable") {
+            throw new Error("Can't reach the server right now. Please try again in a moment.");
+          } else if (res.error.startsWith("backend_error_")) {
+            const statusCode = res.error.replace("backend_error_", "");
+            throw new Error(`Server error (${statusCode}). This isn't a wrong password — something's misconfigured on the backend.`);
+          } else {
+            throw new Error(res.error);
+          }
+        }
         toast.success("Welcome back!");
         router.push("/dashboard");
       }
