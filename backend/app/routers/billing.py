@@ -29,6 +29,7 @@ PLANS = {
     "free": {
         "name": "Free",
         "price_usd": 0,
+        "price_inr": 0,
         "eval_runs_per_month": 50,
         "team_members": 1,
         "baselines": 1,
@@ -47,6 +48,7 @@ PLANS = {
     "pro": {
         "name": "Pro",
         "price_usd": 29,
+        "price_inr": 4999,
         "stripe_price_id": settings.stripe_pro_price_id,
         "eval_runs_per_month": -1,       # unlimited
         "team_members": 1,
@@ -67,6 +69,7 @@ PLANS = {
     "team": {
         "name": "Team",
         "price_usd": 99,
+        "price_inr": 24999,
         "stripe_price_id": settings.stripe_team_price_id,
         "eval_runs_per_month": -1,
         "team_members": 10,
