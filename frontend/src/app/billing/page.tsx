@@ -9,6 +9,7 @@ import { clsx } from "clsx";
 type Plan = {
   name: string;
   price_usd: number;
+  price_inr: number;
   features: string[];
   eval_runs_per_month: number;
   team_members: number;
@@ -74,7 +75,7 @@ export default function BillingPage() {
         {plans.map(([planKey, plan]) => {
           const Icon = planIcons[plan.name] || Zap;
           const highlight = planHighlight[plan.name];
-          const isFree = plan.price_usd === 0;
+          const isFree = plan.price_inr === 0;
 
           return (
             <div
@@ -104,7 +105,7 @@ export default function BillingPage() {
                 </div>
                 <div className="text-lg font-semibold text-white">{plan.name}</div>
                 <div className="flex items-baseline gap-1 mt-1">
-                  <span className="text-3xl font-bold text-white">${plan.price_usd}</span>
+                  <span className="text-3xl font-bold text-white">₹{plan.price_inr.toLocaleString("en-IN")}</span>
                   {!isFree && <span className="text-gray-500 text-sm">/month</span>}
                   {isFree && <span className="text-gray-500 text-sm">forever</span>}
                 </div>
