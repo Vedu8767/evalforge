@@ -120,18 +120,19 @@ class DatasetRowsBulkCreate(BaseModel):
 
 class EvalRunCreate(BaseModel):
     model_config = {"protected_namespaces": ()}
-    dataset_id: UUID4
+    dataset_id: Optional[UUID4] = None  # not required for jailbreak-only runs
     model_endpoint_id: UUID4
     eval_types: List[str] = Field(
         default=["factual"],
         description="List of: hallucination, jailbreak, regression, factual"
     )
+    probe_ids: Optional[List[str]] = None  # which jailbreak probes to run; all probes if omitted
     baseline_id: Optional[UUID4] = None
     concurrency: int = Field(default=5, ge=1, le=20)
 
 class EvalRunOut(BaseModel):
     id: UUID4
-    dataset_id: UUID4
+    dataset_id: Optional[UUID4]
     model_endpoint_id: UUID4
     status: str
     eval_types: List[str]
@@ -150,13 +151,15 @@ class EvalRunOut(BaseModel):
 
 class EvalResultOut(BaseModel):
     id: UUID4
-    dataset_row_id: UUID4
+    dataset_row_id: Optional[UUID4]
     actual_output: str
     hallucination_detected: Optional[bool]
     hallucination_confidence: Optional[float]
     hallucination_reason: Optional[str]
     jailbreak_succeeded: Optional[bool]
     jailbreak_category: Optional[str]
+    jailbreak_probe_id: Optional[str]
+    language: Optional[str]
     factual_score: Optional[float]
     similarity_score: Optional[float]
     judge_verdict: Optional[str]
