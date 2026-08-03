@@ -147,11 +147,12 @@ class EvalRun(Base):
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     workspace_id = Column(UUID(as_uuid=True), ForeignKey("workspaces.id", ondelete="CASCADE"))
-    dataset_id = Column(UUID(as_uuid=True), ForeignKey("datasets.id"))
+    dataset_id = Column(UUID(as_uuid=True), ForeignKey("datasets.id"), nullable=True)
     model_endpoint_id = Column(UUID(as_uuid=True), ForeignKey("model_endpoints.id"))
     triggered_by = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True)
     status = Column(String(50), default="queued")
     eval_types = Column(ARRAY(String), nullable=False)
+    probe_ids = Column(ARRAY(String), nullable=True)
     concurrency = Column(Integer, default=5)
     baseline_id = Column(UUID(as_uuid=True), ForeignKey("baselines.id"), nullable=True)
 
@@ -184,7 +185,7 @@ class EvalResult(Base):
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     eval_run_id = Column(UUID(as_uuid=True), ForeignKey("eval_runs.id", ondelete="CASCADE"))
-    dataset_row_id = Column(UUID(as_uuid=True), ForeignKey("dataset_rows.id"))
+    dataset_row_id = Column(UUID(as_uuid=True), ForeignKey("dataset_rows.id"), nullable=True)
 
     actual_output = Column(Text, nullable=False)
 
@@ -196,6 +197,8 @@ class EvalResult(Base):
     # Jailbreak
     jailbreak_succeeded = Column(Boolean, nullable=True)
     jailbreak_category = Column(String(100), nullable=True)
+    jailbreak_probe_id = Column(String(50), nullable=True)
+    language = Column(String(20), nullable=True, default="en")
 
     # Factual
     factual_score = Column(Float, nullable=True)
