@@ -15,17 +15,37 @@ const PROBE_CATEGORIES = [
   { id: "hypothetical", label: "Hypothetical Framing", color: "text-blue-400", bg: "bg-blue-900/20 border-blue-800/50", description: "Tests if academic or hypothetical framing bypasses safety." },
 ];
 
+const LANGUAGES = [
+  { id: "en", label: "English" },
+  { id: "hi", label: "हिंदी (Hindi)" },
+  { id: "mr", label: "मराठी (Marathi)" },
+  { id: "hinglish", label: "Hinglish" },
+];
+
 const PROBES = [
-  { id: "pi_001", category: "prompt_injection", name: "Instruction Override", risk: "high" },
-  { id: "pi_002", category: "prompt_injection", name: "System Override", risk: "high" },
-  { id: "rp_001", category: "roleplay_bypass", name: "DAN Prompt", risk: "critical" },
-  { id: "rp_002", category: "roleplay_bypass", name: "Evil Character", risk: "critical" },
-  { id: "rp_003", category: "roleplay_bypass", name: "Fictional Framing", risk: "high" },
-  { id: "ms_001", category: "many_shot", name: "Fake Q&A Priming", risk: "medium" },
-  { id: "co_001", category: "competing_objectives", name: "Summarize Harmful Doc", risk: "high" },
-  { id: "hyp_001", category: "hypothetical", name: "Academic Framing", risk: "medium" },
-  { id: "hyp_002", category: "hypothetical", name: "Hypothetical World", risk: "high" },
-  { id: "ts_001", category: "token_smuggling", name: "Obfuscated Request", risk: "medium" },
+  { id: "pi_001", category: "prompt_injection", name: "Instruction Override", risk: "high", language: "en" },
+  { id: "pi_002", category: "prompt_injection", name: "System Override", risk: "high", language: "en" },
+  { id: "rp_001", category: "roleplay_bypass", name: "DAN Prompt", risk: "critical", language: "en" },
+  { id: "rp_002", category: "roleplay_bypass", name: "Evil Character", risk: "critical", language: "en" },
+  { id: "rp_003", category: "roleplay_bypass", name: "Fictional Framing", risk: "high", language: "en" },
+  { id: "ms_001", category: "many_shot", name: "Fake Q&A Priming", risk: "medium", language: "en" },
+  { id: "co_001", category: "competing_objectives", name: "Summarize Harmful Doc", risk: "high", language: "en" },
+  { id: "hyp_001", category: "hypothetical", name: "Academic Framing", risk: "medium", language: "en" },
+  { id: "hyp_002", category: "hypothetical", name: "Hypothetical World", risk: "high", language: "en" },
+  { id: "ts_001", category: "token_smuggling", name: "Obfuscated Request", risk: "medium", language: "en" },
+
+  { id: "pi_hi_001", category: "prompt_injection", name: "Instruction Override (Hindi)", risk: "high", language: "hi" },
+  { id: "rp_hi_001", category: "roleplay_bypass", name: "Evil Character (Hindi)", risk: "critical", language: "hi" },
+  { id: "hyp_hi_001", category: "hypothetical", name: "Academic Framing (Hindi)", risk: "medium", language: "hi" },
+  { id: "co_hi_001", category: "competing_objectives", name: "Fake Medical Authority (Hindi)", risk: "high", language: "hi" },
+
+  { id: "pi_mr_001", category: "prompt_injection", name: "Instruction Override (Marathi)", risk: "high", language: "mr" },
+  { id: "rp_mr_001", category: "roleplay_bypass", name: "Fictional Framing (Marathi)", risk: "high", language: "mr" },
+  { id: "co_mr_001", category: "competing_objectives", name: "Fake Govt Scheme Authority (Marathi)", risk: "high", language: "mr" },
+
+  { id: "pi_hg_001", category: "prompt_injection", name: "Instruction Override (Hinglish)", risk: "high", language: "hinglish" },
+  { id: "rp_hg_001", category: "roleplay_bypass", name: "DAN Prompt (Hinglish)", risk: "critical", language: "hinglish" },
+  { id: "hyp_hg_001", category: "hypothetical", name: "Hypothetical World (Hinglish)", risk: "high", language: "hinglish" },
 ];
 
 const RISK_COLOR: Record<string, string> = {
@@ -38,6 +58,7 @@ const RISK_COLOR: Record<string, string> = {
 export default function RedTeamPage() {
   const [selectedModel, setSelectedModel] = useState("");
   const [selectedProbes, setSelectedProbes] = useState<string[]>(PROBES.map(p => p.id));
+  const [selectedLanguages, setSelectedLanguages] = useState<string[]>(LANGUAGES.map(l => l.id));
   const [results, setResults] = useState<any | null>(null);
   const [expandedProbe, setExpandedProbe] = useState<string | null>(null);
   const [running, setRunning] = useState(false);
@@ -53,9 +74,20 @@ export default function RedTeamPage() {
     );
   };
 
+  const toggleLanguage = (id: string) => {
+    setSelectedLanguages(prev =>
+      prev.includes(id) ? prev.filter(l => l !== id) : [...prev, id]
+    );
+  };
+
+  const visibleProbes = PROBES.filter(p => selectedLanguages.includes(p.language));
+  // What will actually run: selected probes that are also currently visible
+  // (i.e. not hidden behind a deselected language filter).
+  const activeProbeIds = selectedProbes.filter(id => visibleProbes.some(p => p.id === id));
+
   const runRedTeam = async () => {
     if (!selectedModel) { toast.error("Select a model first"); return; }
-    if (selectedProbes.length === 0) { toast.error("Select at least one probe"); return; }
+    if (activeProbeIds.length === 0) { toast.error("Select at least one probe"); return; }
 
     setRunning(true);
     setResults(null);
@@ -64,7 +96,7 @@ export default function RedTeamPage() {
         model_endpoint_id: selectedModel,
         dataset_id: null,
         eval_types: ["jailbreak"],
-        probe_ids: selectedProbes,
+        probe_ids: activeProbeIds,
         concurrency: 2,
       });
       toast.success("Red team run started! Check Eval Runs for results.");
@@ -89,8 +121,8 @@ export default function RedTeamPage() {
           <h1 className="text-2xl font-bold text-white">Red Team Testing</h1>
         </div>
         <p className="text-gray-400 text-sm">
-          Test your LLM against adversarial probes across 5 jailbreak attack categories.
-          A resistant model should refuse all 10 probes.
+          Test your LLM against adversarial probes across 5 jailbreak attack categories,
+          in English, Hindi, Marathi, and Hinglish. A resistant model should refuse every probe.
         </p>
       </div>
 
@@ -120,6 +152,27 @@ export default function RedTeamPage() {
             )}
           </div>
 
+          {/* Language filter */}
+          <div className="bg-gray-900 rounded-xl border border-gray-800 p-5">
+            <div className="text-sm font-medium text-white mb-3">Test Language</div>
+            <div className="flex flex-wrap gap-2">
+              {LANGUAGES.map(lang => (
+                <button
+                  key={lang.id}
+                  onClick={() => toggleLanguage(lang.id)}
+                  className={clsx(
+                    "px-3 py-1.5 rounded-full text-xs font-medium border transition-all",
+                    selectedLanguages.includes(lang.id)
+                      ? "border-emerald-500 bg-emerald-600/20 text-emerald-300"
+                      : "border-gray-700 text-gray-500 hover:border-gray-600"
+                  )}
+                >
+                  {lang.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
           {/* Probe categories */}
           <div className="bg-gray-900 rounded-xl border border-gray-800 p-5">
             <div className="flex items-center justify-between mb-4">
@@ -143,7 +196,8 @@ export default function RedTeamPage() {
 
             <div className="space-y-2">
               {PROBE_CATEGORIES.map(cat => {
-                const catProbes = PROBES.filter(p => p.category === cat.id);
+                const catProbes = visibleProbes.filter(p => p.category === cat.id);
+                if (catProbes.length === 0) return null;
                 const selectedCount = catProbes.filter(p => selectedProbes.includes(p.id)).length;
 
                 return (
@@ -181,11 +235,11 @@ export default function RedTeamPage() {
           {/* Run button */}
           <button
             onClick={runRedTeam}
-            disabled={running || !selectedModel || selectedProbes.length === 0}
+            disabled={running || !selectedModel || activeProbeIds.length === 0}
             className="w-full flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 disabled:opacity-40 disabled:cursor-not-allowed text-white py-3 rounded-xl text-sm font-medium transition-colors"
           >
             <Play size={16} />
-            {running ? "Starting red team run..." : `Run ${selectedProbes.length} probes`}
+            {running ? "Starting red team run..." : `Run ${activeProbeIds.length} probes`}
           </button>
 
           {/* Result queued notice */}
@@ -239,8 +293,8 @@ export default function RedTeamPage() {
 
           <div className="bg-gray-900 rounded-xl border border-gray-800 p-5">
             <div className="text-sm font-medium text-white mb-1">Selected probes</div>
-            <div className="text-3xl font-bold text-white">{selectedProbes.length}</div>
-            <div className="text-xs text-gray-500">of {PROBES.length} total</div>
+            <div className="text-3xl font-bold text-white">{activeProbeIds.length}</div>
+            <div className="text-xs text-gray-500">of {PROBES.length} total, across {LANGUAGES.length} languages</div>
           </div>
         </div>
       </div>
