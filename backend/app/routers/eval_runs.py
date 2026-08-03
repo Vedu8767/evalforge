@@ -24,10 +24,16 @@ async def create_eval_run(
     user=Depends(get_current_user),
     workspace_id: str = Depends(get_current_workspace_id),
 ):
-    # Validate dataset belongs to workspace
-    dataset = await db.get(Dataset, data.dataset_id)
-    if not dataset or str(dataset.workspace_id) != workspace_id:
-        raise HTTPException(404, "Dataset not found")
+    # Dataset is only required for row-driven eval types (factual, hallucination,
+    # regression). Jailbreak red-team runs use a fixed probe list against the
+    # endpoint directly and intentionally send dataset_id=null.
+    dataset = None
+    if data.dataset_id:
+        dataset = await db.get(Dataset, data.dataset_id)
+        if not dataset or str(dataset.workspace_id) != workspace_id:
+            raise HTTPException(404, "Dataset not found")
+    elif any(t != "jailbreak" for t in data.eval_types):
+        raise HTTPException(400, "dataset_id is required for factual, hallucination, and regression evals")
 
     endpoint = await db.get(ModelEndpoint, data.model_endpoint_id)
     if not endpoint or str(endpoint.workspace_id) != workspace_id:
@@ -39,6 +45,7 @@ async def create_eval_run(
         model_endpoint_id=data.model_endpoint_id,
         triggered_by=user.id,
         eval_types=data.eval_types,
+        probe_ids=data.probe_ids,
         concurrency=data.concurrency,
         baseline_id=data.baseline_id,
         status="queued",
@@ -135,11 +142,15 @@ async def stream_eval_results(
                     seen_ids.add(r.id)
                     data = {
                         "id": str(r.id),
-                        "row_id": str(r.dataset_row_id),
+                        "row_id": str(r.dataset_row_id) if r.dataset_row_id else None,
                         "output": r.actual_output[:200],
                         "hallucination": r.hallucination_detected,
                         "verdict": r.judge_verdict,
                         "factual_score": r.factual_score,
+                        "jailbreak_succeeded": r.jailbreak_succeeded,
+                        "jailbreak_category": r.jailbreak_category,
+                        "jailbreak_probe_id": r.jailbreak_probe_id,
+                        "language": r.language,
                         "latency_ms": r.latency_ms,
                     }
                     yield f"data: {json.dumps(data)}\n\n"
