@@ -63,7 +63,7 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-950 flex items-center justify-center px-4">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-950 flex items-center justify-center px-4">
       <div className="w-full max-w-md">
         {/* Logo */}
         <div className="flex items-center justify-center gap-3 mb-8">
@@ -73,7 +73,7 @@ export default function LoginPage() {
           <span className="text-2xl font-bold text-white tracking-tight">EvalForge</span>
         </div>
 
-        <div className="bg-gray-900 rounded-2xl border border-gray-800 p-8">
+        <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-8">
           <h1 className="text-xl font-semibold text-white mb-1">
             {mode === "login" ? "Sign in to your account" : "Create your account"}
           </h1>
@@ -90,7 +90,7 @@ export default function LoginPage() {
           {/* Google OAuth */}
           <button
             onClick={() => signIn("google", { callbackUrl: "/dashboard" })}
-            className="w-full flex items-center justify-center gap-3 border border-gray-700 rounded-lg py-2.5 text-sm text-gray-300 hover:bg-gray-800 transition-colors mb-4"
+            className="w-full flex items-center justify-center gap-3 border border-gray-300 dark:border-gray-700 rounded-lg py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors mb-4"
           >
             <svg viewBox="0 0 24 24" className="w-4 h-4" fill="currentColor">
               <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
@@ -102,44 +102,44 @@ export default function LoginPage() {
           </button>
 
           <div className="flex items-center gap-3 my-5">
-            <div className="flex-1 h-px bg-gray-800" />
-            <span className="text-xs text-gray-600">or</span>
-            <div className="flex-1 h-px bg-gray-800" />
+            <div className="flex-1 h-px bg-gray-100 dark:bg-gray-800" />
+            <span className="text-xs text-gray-500 dark:text-gray-600">or</span>
+            <div className="flex-1 h-px bg-gray-100 dark:bg-gray-800" />
           </div>
 
           {/* Email form */}
           <form onSubmit={handleSubmit} className="space-y-4">
             {mode === "register" && (
               <div>
-                <label className="block text-xs text-gray-400 mb-1.5">Full name</label>
+                <label className="block text-xs text-gray-600 dark:text-gray-400 mb-1.5">Full name</label>
                 <input
                   type="text"
                   required
                   value={form.name}
                   onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
                   placeholder="Jane Smith"
-                  className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-indigo-500"
+                  className="w-full bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg px-3 py-2.5 text-sm text-white placeholder-gray-400 dark:placeholder-gray-600 focus:outline-none focus:border-indigo-500"
                 />
               </div>
             )}
             <div>
-              <label className="block text-xs text-gray-400 mb-1.5">Email</label>
+              <label className="block text-xs text-gray-600 dark:text-gray-400 mb-1.5">Email</label>
               <div className="relative">
-                <Mail size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-600" />
+                <Mail size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 dark:text-gray-600" />
                 <input
                   type="email"
                   required
                   value={form.email}
                   onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
                   placeholder="jane@company.com"
-                  className="w-full bg-gray-800 border border-gray-700 rounded-lg pl-9 pr-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-indigo-500"
+                  className="w-full bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg pl-9 pr-3 py-2.5 text-sm text-white placeholder-gray-400 dark:placeholder-gray-600 focus:outline-none focus:border-indigo-500"
                 />
               </div>
             </div>
             <div>
-              <label className="block text-xs text-gray-400 mb-1.5">Password</label>
+              <label className="block text-xs text-gray-600 dark:text-gray-400 mb-1.5">Password</label>
               <div className="relative">
-                <Lock size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-600" />
+                <Lock size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 dark:text-gray-600" />
                 <input
                   type="password"
                   required
@@ -147,7 +147,7 @@ export default function LoginPage() {
                   value={form.password}
                   onChange={(e) => setForm((f) => ({ ...f, password: e.target.value }))}
                   placeholder="Min. 8 characters"
-                  className="w-full bg-gray-800 border border-gray-700 rounded-lg pl-9 pr-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-indigo-500"
+                  className="w-full bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg pl-9 pr-3 py-2.5 text-sm text-white placeholder-gray-400 dark:placeholder-gray-600 focus:outline-none focus:border-indigo-500"
                 />
               </div>
             </div>
@@ -161,7 +161,7 @@ export default function LoginPage() {
           </form>
         </div>
 
-        <p className="text-center text-xs text-gray-700 mt-6">
+        <p className="text-center text-xs text-gray-400 dark:text-gray-700 mt-6">
           By signing in you agree to our Terms of Service.
         </p>
       </div>

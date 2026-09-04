@@ -8,6 +8,7 @@ import {
   Settings, Shield, Zap, LogOut, User
 } from "lucide-react";
 import { clsx } from "clsx";
+import { ThemeToggle } from "../theme-toggle";
 
 const nav = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -31,7 +32,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   if (status === "loading") {
     return (
-      <div className="flex h-screen items-center justify-center bg-gray-950">
+      <div className="flex h-screen items-center justify-center bg-gray-50 dark:bg-gray-950">
         <div className="flex items-center gap-3">
           <div className="w-5 h-5 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin" />
           <span className="text-gray-500 text-sm">Loading...</span>
@@ -53,12 +54,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   };
 
   return (
-    <div className="flex h-screen overflow-hidden bg-gray-950">
+    <div className="flex h-screen overflow-hidden bg-gray-50 dark:bg-gray-950">
       {/* Sidebar */}
-      <aside className="w-56 flex-shrink-0 bg-gray-900 border-r border-gray-800 flex flex-col">
+      <aside className="w-56 flex-shrink-0 bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 flex flex-col">
 
         {/* Logo */}
-        <div className="px-5 py-5 border-b border-gray-800">
+        <div className="px-5 py-5 border-b border-gray-200 dark:border-gray-800">
           <div className="flex items-center gap-2.5">
             <div className="w-7 h-7 bg-indigo-600 rounded-lg flex items-center justify-center">
               <Zap size={15} className="text-white" />
@@ -79,7 +80,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                   "flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors",
                   active
                     ? "bg-indigo-600/20 text-indigo-300"
-                    : "text-gray-400 hover:text-gray-200 hover:bg-gray-800"
+                    : "text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800"
                 )}
               >
                 <Icon size={16} />
@@ -90,32 +91,35 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </nav>
 
         {/* User info + Logout */}
-        <div className="px-3 py-4 border-t border-gray-800 space-y-1">
+        <div className="px-3 py-4 border-t border-gray-200 dark:border-gray-800 space-y-1">
           {/* User info */}
-          <div className="flex items-center gap-2.5 px-3 py-2 rounded-lg bg-gray-800/50">
+          <div className="flex items-center gap-2.5 px-3 py-2 rounded-lg bg-gray-100 dark:bg-gray-800/50">
             <div className="w-6 h-6 bg-indigo-600/30 rounded-full flex items-center justify-center flex-shrink-0">
               <User size={12} className="text-indigo-400" />
             </div>
             <div className="min-w-0">
-              <div className="text-xs font-medium text-gray-300 truncate">
+              <div className="text-xs font-medium text-gray-700 dark:text-gray-300 truncate">
                 {session.user?.name || "User"}
               </div>
-              <div className="text-xs text-gray-600 truncate">
+              <div className="text-xs text-gray-500 dark:text-gray-600 truncate">
                 {session.user?.email || ""}
               </div>
             </div>
           </div>
 
+          {/* Theme toggle */}
+          <ThemeToggle />
+
           {/* Logout button */}
           <button
             onClick={handleSignOut}
-            className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm text-gray-400 hover:text-red-400 hover:bg-red-900/10 transition-colors"
+            className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm text-gray-600 dark:text-gray-400 hover:text-red-400 hover:bg-red-900/10 transition-colors"
           >
             <LogOut size={16} />
             Sign out
           </button>
 
-          <div className="text-xs text-gray-700 px-3 pt-1">EvalForge v0.1</div>
+          <div className="text-xs text-gray-400 dark:text-gray-700 px-3 pt-1">EvalForge v0.1</div>
         </div>
       </aside>
 

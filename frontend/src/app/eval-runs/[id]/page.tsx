@@ -8,7 +8,7 @@ import { CheckCircle, AlertTriangle, ChevronDown, ChevronUp, Download } from "lu
 
 function ScoreCircle({ score, label }: { score: number | null; label: string }) {
   const color =
-    score === null ? "text-gray-600" :
+    score === null ? "text-gray-500 dark:text-gray-600" :
     score >= 90 ? "text-emerald-400" :
     score >= 75 ? "text-green-400" :
     score >= 60 ? "text-yellow-400" : "text-red-400";
@@ -24,11 +24,11 @@ function ScoreCircle({ score, label }: { score: number | null; label: string }) 
 
 function StatusBadge({ status }: { status: EvalRun["status"] }) {
   const map: Record<string, { color: string; label: string; dot: string }> = {
-    queued:    { color: "text-gray-400",    label: "Queued",    dot: "bg-gray-500" },
+    queued:    { color: "text-gray-600 dark:text-gray-400",    label: "Queued",    dot: "bg-gray-400 dark:bg-gray-500" },
     running:   { color: "text-blue-400",    label: "Running",   dot: "bg-blue-400 animate-pulse" },
     completed: { color: "text-emerald-400", label: "Completed", dot: "bg-emerald-400" },
     failed:    { color: "text-red-400",     label: "Failed",    dot: "bg-red-400" },
-    cancelled: { color: "text-gray-500",    label: "Cancelled", dot: "bg-gray-600" },
+    cancelled: { color: "text-gray-500",    label: "Cancelled", dot: "bg-gray-300 dark:bg-gray-600" },
   };
   const s = map[status] ?? map.queued;
   return (
@@ -41,7 +41,7 @@ function StatusBadge({ status }: { status: EvalRun["status"] }) {
 
 function VerdictBadge({ verdict }: { verdict: string | null }) {
   if (!verdict) return (
-    <span className="bg-gray-800 text-gray-400 px-2 py-0.5 rounded-full text-xs font-medium">
+    <span className="bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 px-2 py-0.5 rounded-full text-xs font-medium">
       N/A
     </span>
   );
@@ -51,10 +51,10 @@ function VerdictBadge({ verdict }: { verdict: string | null }) {
     incorrect: "bg-red-900/40 text-red-300",
     pass:      "bg-emerald-900/40 text-emerald-300",
     fail:      "bg-red-900/40 text-red-300",
-    unclear:   "bg-gray-800 text-gray-400",
+    unclear:   "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400",
   };
   return (
-    <span className={clsx("px-2 py-0.5 rounded-full text-xs font-medium", map[verdict] ?? "bg-gray-800 text-gray-400")}>
+    <span className={clsx("px-2 py-0.5 rounded-full text-xs font-medium", map[verdict] ?? "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400")}>
       {verdict}
     </span>
   );
@@ -84,7 +84,7 @@ function HallucinationBadge({ detected }: { detected: boolean | null }) {
 
 function FactualBadge({ score }: { score: number | null }) {
   if (score === null || score === undefined) {
-    return <span className="text-gray-400 text-xs">0%</span>;
+    return <span className="text-gray-600 dark:text-gray-400 text-xs">0%</span>;
   }
   const pct = Math.round(score * 100);
   const color = pct >= 80 ? "text-emerald-400" : pct >= 60 ? "text-yellow-400" : "text-red-400";
@@ -96,11 +96,11 @@ function ResultRow({ result }: { result: EvalResult }) {
   return (
     <>
       <tr
-        className="border-t border-gray-800 hover:bg-gray-800/40 cursor-pointer transition-colors"
+        className="border-t border-gray-200 dark:border-gray-800 hover:bg-gray-100 dark:hover:bg-gray-800/40 cursor-pointer transition-colors"
         onClick={() => setExpanded(!expanded)}
       >
-        <td className="px-4 py-3 text-xs text-gray-400 font-mono">{result.id.slice(0, 8)}</td>
-        <td className="px-4 py-3 text-xs text-gray-300 max-w-xs truncate">{result.actual_output || "—"}</td>
+        <td className="px-4 py-3 text-xs text-gray-600 dark:text-gray-400 font-mono">{result.id.slice(0, 8)}</td>
+        <td className="px-4 py-3 text-xs text-gray-700 dark:text-gray-300 max-w-xs truncate">{result.actual_output || "—"}</td>
         <td className="px-4 py-3">
           <HallucinationBadge detected={result.hallucination_detected} />
         </td>
@@ -113,17 +113,17 @@ function ResultRow({ result }: { result: EvalResult }) {
         <td className="px-4 py-3 text-xs text-gray-500 tabular-nums">
           {result.latency_ms ? `${result.latency_ms}ms` : "—"}
         </td>
-        <td className="px-4 py-3 text-gray-600">
+        <td className="px-4 py-3 text-gray-500 dark:text-gray-600">
           {expanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
         </td>
       </tr>
       {expanded && (
-        <tr className="border-t border-gray-800 bg-gray-900/50">
+        <tr className="border-t border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900/50">
           <td colSpan={7} className="px-6 py-4">
             <div className="grid grid-cols-2 gap-4 text-xs">
               <div>
                 <div className="text-gray-500 mb-1 font-medium">Full output</div>
-                <div className="text-gray-300 bg-gray-800 rounded-lg p-3 font-mono whitespace-pre-wrap leading-relaxed max-h-48 overflow-y-auto">
+                <div className="text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-800 rounded-lg p-3 font-mono whitespace-pre-wrap leading-relaxed max-h-48 overflow-y-auto">
                   {result.actual_output || "No output"}
                 </div>
               </div>
@@ -131,13 +131,13 @@ function ResultRow({ result }: { result: EvalResult }) {
                 {result.hallucination_reason && (
                   <div>
                     <div className="text-gray-500 mb-1 font-medium">Hallucination reason</div>
-                    <div className="text-gray-300 bg-gray-800 rounded-lg p-3">{result.hallucination_reason}</div>
+                    <div className="text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-800 rounded-lg p-3">{result.hallucination_reason}</div>
                   </div>
                 )}
                 {result.judge_reasoning && (
                   <div>
                     <div className="text-gray-500 mb-1 font-medium">Judge reasoning</div>
-                    <div className="text-gray-300 bg-gray-800 rounded-lg p-3">{result.judge_reasoning}</div>
+                    <div className="text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-800 rounded-lg p-3">{result.judge_reasoning}</div>
                   </div>
                 )}
                 {result.error && (
@@ -207,7 +207,7 @@ export default function EvalRunDetailPage() {
     a.click();
   };
 
-  if (!run) return <div className="p-8 text-gray-600 text-sm">Loading...</div>;
+  if (!run) return <div className="p-8 text-gray-500 dark:text-gray-600 text-sm">Loading...</div>;
 
   const progress = run.total_rows > 0
     ? Math.round((run.completed_rows / run.total_rows) * 100)
@@ -228,7 +228,7 @@ export default function EvalRunDetailPage() {
         {run.status === "completed" && (
           <button
             onClick={exportCSV}
-            className="flex items-center gap-2 text-sm text-gray-400 hover:text-white border border-gray-700 rounded-lg px-3 py-2 transition-colors"
+            className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 hover:text-white border border-gray-300 dark:border-gray-700 rounded-lg px-3 py-2 transition-colors"
           >
             <Download size={14} /> Export CSV
           </button>
@@ -236,12 +236,12 @@ export default function EvalRunDetailPage() {
       </div>
 
       {(run.status === "running" || run.status === "queued") && (
-        <div className="bg-gray-900 rounded-xl border border-gray-800 p-5 mb-6">
-          <div className="flex justify-between text-sm text-gray-400 mb-3">
+        <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-5 mb-6">
+          <div className="flex justify-between text-sm text-gray-600 dark:text-gray-400 mb-3">
             <span>Processing rows...</span>
             <span className="tabular-nums">{run.completed_rows} / {run.total_rows}</span>
           </div>
-          <div className="h-2 bg-gray-800 rounded-full overflow-hidden">
+          <div className="h-2 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
             <div
               className="h-full bg-indigo-600 rounded-full transition-all duration-500"
               style={{ width: `${progress}%` }}
@@ -258,7 +258,7 @@ export default function EvalRunDetailPage() {
           { label: "Jailbreak resist.",  value: run.jailbreak_resistance_score },
           { label: "Factual accuracy",   value: run.factual_accuracy_score },
         ].map(({ label, value }) => (
-          <div key={label} className="bg-gray-900 rounded-xl border border-gray-800 p-5 text-center">
+          <div key={label} className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-5 text-center">
             <ScoreCircle score={value} label={label} />
           </div>
         ))}
@@ -271,13 +271,13 @@ export default function EvalRunDetailPage() {
       )}
 
       {results.length > 0 && (
-        <div className="bg-gray-900 rounded-xl border border-gray-800">
-          <div className="px-6 py-4 border-b border-gray-800 flex items-center justify-between">
+        <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800">
+          <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-800 flex items-center justify-between">
             <h2 className="text-sm font-medium text-white">{results.length} Results</h2>
             <select
               value={filterVerdict}
               onChange={(e) => setFilterVerdict(e.target.value)}
-              className="bg-gray-800 border border-gray-700 text-sm text-gray-300 rounded-lg px-3 py-1.5 focus:outline-none"
+              className="bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 text-sm text-gray-700 dark:text-gray-300 rounded-lg px-3 py-1.5 focus:outline-none"
             >
               <option value="">All verdicts</option>
               <option value="correct">Correct</option>
@@ -288,7 +288,7 @@ export default function EvalRunDetailPage() {
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
-                <tr className="text-xs text-gray-600 uppercase tracking-wider">
+                <tr className="text-xs text-gray-500 dark:text-gray-600 uppercase tracking-wider">
                   <th className="px-4 py-3 text-left">ID</th>
                   <th className="px-4 py-3 text-left">Output</th>
                   <th className="px-4 py-3 text-left">Hallucination</th>

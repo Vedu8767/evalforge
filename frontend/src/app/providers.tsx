@@ -3,6 +3,7 @@ import { SessionProvider, useSession } from "next-auth/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "sonner";
 import { useEffect, useRef, useState } from "react";
+import { ThemeProvider, useTheme } from "./theme-provider";
 
 function QueryClientResetOnUserChange({ children, queryClient }: { children: React.ReactNode; queryClient: QueryClient }) {
   const { data: session, status } = useSession();
@@ -44,6 +45,11 @@ function QueryClientResetOnUserChange({ children, queryClient }: { children: Rea
   return <>{children}</>;
 }
 
+function ThemedToaster() {
+  const { theme } = useTheme();
+  return <Toaster theme={theme} position="top-right" />;
+}
+
 export default function Providers({ children }: { children: React.ReactNode }) {
   const [queryClient] = useState(
     () =>
@@ -60,13 +66,15 @@ export default function Providers({ children }: { children: React.ReactNode }) {
   );
 
   return (
-    <SessionProvider>
-      <QueryClientProvider client={queryClient}>
-        <QueryClientResetOnUserChange queryClient={queryClient}>
-          {children}
-        </QueryClientResetOnUserChange>
-        <Toaster theme="dark" position="top-right" />
-      </QueryClientProvider>
-    </SessionProvider>
+    <ThemeProvider>
+      <SessionProvider>
+        <QueryClientProvider client={queryClient}>
+          <QueryClientResetOnUserChange queryClient={queryClient}>
+            {children}
+          </QueryClientResetOnUserChange>
+          <ThemedToaster />
+        </QueryClientProvider>
+      </SessionProvider>
+    </ThemeProvider>
   );
 }

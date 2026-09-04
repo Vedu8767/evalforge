@@ -9,12 +9,12 @@ function StatusBadge({ status }: { status: string }) {
   const map: Record<string, string> = {
     completed: "bg-emerald-900/40 text-emerald-300",
     running:   "bg-blue-900/40 text-blue-300 animate-pulse",
-    queued:    "bg-gray-800 text-gray-400",
+    queued:    "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400",
     failed:    "bg-red-900/40 text-red-300",
-    cancelled: "bg-gray-800 text-gray-500",
+    cancelled: "bg-gray-100 dark:bg-gray-800 text-gray-500",
   };
   return (
-    <span className={clsx("px-2 py-0.5 rounded-full text-xs font-medium", map[status] ?? "bg-gray-800 text-gray-400")}>
+    <span className={clsx("px-2 py-0.5 rounded-full text-xs font-medium", map[status] ?? "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400")}>
       {status}
     </span>
   );
@@ -34,7 +34,7 @@ export default function EvalRunsPage() {
       <div className="flex items-center justify-between mb-8">
         <div>
           <h1 className="text-2xl font-bold text-white">Eval Runs</h1>
-          <p className="text-gray-400 text-sm mt-1">All evaluation runs for this workspace</p>
+          <p className="text-gray-600 dark:text-gray-400 text-sm mt-1">All evaluation runs for this workspace</p>
         </div>
         <Link
           href="/eval-runs/new"
@@ -45,22 +45,22 @@ export default function EvalRunsPage() {
       </div>
 
       {isLoading ? (
-        <div className="text-gray-600 text-sm">Loading...</div>
+        <div className="text-gray-500 dark:text-gray-600 text-sm">Loading...</div>
       ) : runs.length === 0 ? (
-        <div className="bg-gray-900 rounded-xl border border-gray-800 p-12 text-center">
-          <Play size={32} className="text-gray-700 mx-auto mb-3" />
+        <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-12 text-center">
+          <Play size={32} className="text-gray-400 dark:text-gray-700 mx-auto mb-3" />
           <p className="text-gray-500 text-sm">No eval runs yet.</p>
           <Link href="/eval-runs/new" className="text-indigo-400 text-sm hover:underline mt-1 inline-block">
             Create your first eval run →
           </Link>
         </div>
       ) : (
-        <div className="bg-gray-900 rounded-xl border border-gray-800 divide-y divide-gray-800">
+        <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 divide-y divide-gray-200 dark:divide-gray-800">
           {runs.map((run: any) => (
             <Link
               key={run.id}
               href={`/eval-runs/${run.id}`}
-              className="flex items-center justify-between px-6 py-4 hover:bg-gray-800/40 transition-colors"
+              className="flex items-center justify-between px-6 py-4 hover:bg-gray-100 dark:hover:bg-gray-800/40 transition-colors"
             >
               <div>
                 <div className="text-sm text-white font-mono">{run.id.slice(0, 8)}...</div>

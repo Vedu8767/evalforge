@@ -57,7 +57,7 @@ export default function NewEvalRunPage() {
   return (
     <div className="p-8 max-w-3xl mx-auto">
       <h1 className="text-2xl font-bold text-white mb-2">New Eval Run</h1>
-      <p className="text-gray-400 text-sm mb-8">Configure and launch an evaluation in 4 steps</p>
+      <p className="text-gray-600 dark:text-gray-400 text-sm mb-8">Configure and launch an evaluation in 4 steps</p>
 
       {/* Step indicator */}
       <div className="flex items-center gap-2 mb-10">
@@ -67,12 +67,12 @@ export default function NewEvalRunPage() {
               "w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold",
               i + 1 < step ? "bg-indigo-600 text-white" :
               i + 1 === step ? "bg-indigo-600/30 text-indigo-300 border border-indigo-500" :
-              "bg-gray-800 text-gray-600"
+              "bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-600"
             )}>
               {i + 1 < step ? "✓" : i + 1}
             </div>
-            <span className={clsx("text-sm", i + 1 === step ? "text-white" : "text-gray-600")}>{s}</span>
-            {i < steps.length - 1 && <ChevronRight size={14} className="text-gray-700 ml-1" />}
+            <span className={clsx("text-sm", i + 1 === step ? "text-white" : "text-gray-500 dark:text-gray-600")}>{s}</span>
+            {i < steps.length - 1 && <ChevronRight size={14} className="text-gray-400 dark:text-gray-700 ml-1" />}
           </div>
         ))}
       </div>
@@ -82,7 +82,7 @@ export default function NewEvalRunPage() {
         <div>
           <h2 className="text-lg font-semibold text-white mb-4">Select Model Endpoint</h2>
           {models.length === 0 ? (
-            <div className="bg-gray-900 rounded-xl border border-gray-800 p-8 text-center">
+            <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-8 text-center">
               <p className="text-gray-500 text-sm">No models registered yet.</p>
               <a href="/models" className="text-indigo-400 text-sm hover:underline mt-1 inline-block">Register a model →</a>
             </div>
@@ -96,7 +96,7 @@ export default function NewEvalRunPage() {
                     "w-full text-left p-4 rounded-xl border transition-colors",
                     form.model_endpoint_id === m.id
                       ? "border-indigo-500 bg-indigo-600/10"
-                      : "border-gray-800 bg-gray-900 hover:border-gray-700"
+                      : "border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 hover:border-gray-300 dark:hover:border-gray-700"
                   )}
                 >
                   <div className="text-sm font-medium text-white">{m.name}</div>
@@ -121,7 +121,7 @@ export default function NewEvalRunPage() {
                   "w-full text-left p-4 rounded-xl border transition-colors",
                   form.dataset_id === d.id
                     ? "border-indigo-500 bg-indigo-600/10"
-                    : "border-gray-800 bg-gray-900 hover:border-gray-700"
+                    : "border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 hover:border-gray-300 dark:hover:border-gray-700"
                 )}
               >
                 <div className="text-sm font-medium text-white">{d.name}</div>
@@ -145,12 +145,12 @@ export default function NewEvalRunPage() {
                   onClick={() => toggleEvalType(e.id)}
                   className={clsx(
                     "w-full text-left p-4 rounded-xl border transition-colors flex items-start gap-4",
-                    selected ? "border-indigo-500 bg-indigo-600/10" : "border-gray-800 bg-gray-900 hover:border-gray-700"
+                    selected ? "border-indigo-500 bg-indigo-600/10" : "border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 hover:border-gray-300 dark:hover:border-gray-700"
                   )}
                 >
                   <div className={clsx(
                     "w-5 h-5 rounded border-2 flex items-center justify-center flex-shrink-0 mt-0.5",
-                    selected ? "border-indigo-500 bg-indigo-600" : "border-gray-600"
+                    selected ? "border-indigo-500 bg-indigo-600" : "border-gray-400 dark:border-gray-600"
                   )}>
                     {selected && <span className="text-white text-xs">✓</span>}
                   </div>
@@ -163,7 +163,7 @@ export default function NewEvalRunPage() {
             })}
           </div>
           <div className="mt-4">
-            <label className="text-sm text-gray-400 block mb-2">Concurrency (parallel LLM calls)</label>
+            <label className="text-sm text-gray-600 dark:text-gray-400 block mb-2">Concurrency (parallel LLM calls)</label>
             <input
               type="range" min={1} max={10} value={form.concurrency}
               onChange={(e) => setForm((f) => ({ ...f, concurrency: +e.target.value }))}
@@ -178,7 +178,7 @@ export default function NewEvalRunPage() {
       {step === 4 && (
         <div>
           <h2 className="text-lg font-semibold text-white mb-4">Review & Launch</h2>
-          <div className="bg-gray-900 rounded-xl border border-gray-800 p-6 space-y-4">
+          <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-6 space-y-4">
             <div className="flex justify-between text-sm">
               <span className="text-gray-500">Model</span>
               <span className="text-white">{models.find(m => m.id === form.model_endpoint_id)?.name}</span>
@@ -204,7 +204,7 @@ export default function NewEvalRunPage() {
         <button
           onClick={() => setStep((s) => s - 1)}
           disabled={step === 1}
-          className="flex items-center gap-2 text-sm text-gray-400 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed"
+          className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed"
         >
           <ChevronLeft size={16} /> Back
         </button>

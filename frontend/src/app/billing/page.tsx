@@ -23,7 +23,7 @@ const planIcons: Record<string, any> = {
 };
 
 const planColors: Record<string, string> = {
-  Free: "border-gray-700",
+  Free: "border-gray-300 dark:border-gray-700",
   Pro: "border-indigo-500",
   Team: "border-purple-500",
 };
@@ -67,7 +67,7 @@ export default function BillingPage() {
     <div className="p-8 max-w-5xl mx-auto">
       <div className="text-center mb-12">
         <h1 className="text-3xl font-bold text-white mb-3">Simple, transparent pricing</h1>
-        <p className="text-gray-400">Start free. Upgrade when your team needs more.</p>
+        <p className="text-gray-600 dark:text-gray-400">Start free. Upgrade when your team needs more.</p>
       </div>
 
       {/* Plan cards */}
@@ -81,8 +81,8 @@ export default function BillingPage() {
             <div
               key={planKey}
               className={clsx(
-                "relative bg-gray-900 rounded-2xl border-2 p-6 flex flex-col",
-                planColors[plan.name] || "border-gray-700",
+                "relative bg-white dark:bg-gray-900 rounded-2xl border-2 p-6 flex flex-col",
+                planColors[plan.name] || "border-gray-300 dark:border-gray-700",
                 highlight && "ring-1 ring-indigo-500/30"
               )}
             >
@@ -95,11 +95,11 @@ export default function BillingPage() {
               <div className="mb-5">
                 <div className={clsx(
                   "w-10 h-10 rounded-xl flex items-center justify-center mb-3",
-                  planKey === "free" ? "bg-gray-800" :
+                  planKey === "free" ? "bg-gray-100 dark:bg-gray-800" :
                   planKey === "pro" ? "bg-indigo-600/20" : "bg-purple-600/20"
                 )}>
                   <Icon size={18} className={
-                    planKey === "free" ? "text-gray-400" :
+                    planKey === "free" ? "text-gray-600 dark:text-gray-400" :
                     planKey === "pro" ? "text-indigo-400" : "text-purple-400"
                   } />
                 </div>
@@ -113,7 +113,7 @@ export default function BillingPage() {
 
               <ul className="space-y-2.5 flex-1 mb-6">
                 {plan.features.map((f: string) => (
-                  <li key={f} className="flex items-start gap-2.5 text-sm text-gray-300">
+                  <li key={f} className="flex items-start gap-2.5 text-sm text-gray-700 dark:text-gray-300">
                     <Check size={14} className="text-emerald-400 flex-shrink-0 mt-0.5" />
                     {f}
                   </li>
@@ -121,7 +121,7 @@ export default function BillingPage() {
               </ul>
 
               {isFree ? (
-                <div className="w-full text-center py-2.5 rounded-xl text-sm text-gray-600 border border-gray-800">
+                <div className="w-full text-center py-2.5 rounded-xl text-sm text-gray-500 dark:text-gray-600 border border-gray-200 dark:border-gray-800">
                   Current plan
                 </div>
               ) : (
@@ -144,7 +144,7 @@ export default function BillingPage() {
       </div>
 
       {/* Manage existing subscription */}
-      <div className="bg-gray-900 rounded-xl border border-gray-800 p-6 flex items-center justify-between">
+      <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-6 flex items-center justify-between">
         <div>
           <div className="text-sm font-medium text-white mb-0.5">Manage subscription</div>
           <div className="text-xs text-gray-500">
@@ -182,7 +182,7 @@ export default function BillingPage() {
               a: "Yes. All API keys are encrypted with AES-256 before storage. We never log or expose them in plaintext.",
             },
           ].map(({ q, a }) => (
-            <div key={q} className="bg-gray-900 rounded-xl border border-gray-800 p-5">
+            <div key={q} className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-5">
               <div className="text-sm font-medium text-white mb-2">{q}</div>
               <div className="text-xs text-gray-500 leading-relaxed">{a}</div>
             </div>

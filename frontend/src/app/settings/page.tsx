@@ -25,31 +25,31 @@ function ProfileTab() {
 
   return (
     <div className="space-y-6">
-      <div className="bg-gray-900 rounded-xl border border-gray-800 p-6">
+      <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-6">
         <h2 className="text-sm font-semibold text-white mb-4">Account Information</h2>
         <div className="grid grid-cols-2 gap-4">
           <div>
             <label className="text-xs text-gray-500 block mb-1.5">Full name</label>
-            <div className="bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-300">
+            <div className="bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-700 dark:text-gray-300">
               {session?.user?.name || "—"}
             </div>
           </div>
           <div>
             <label className="text-xs text-gray-500 block mb-1.5">Email</label>
-            <div className="bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-300 flex items-center gap-2">
-              <Mail size={12} className="text-gray-600" />
+            <div className="bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-700 dark:text-gray-300 flex items-center gap-2">
+              <Mail size={12} className="text-gray-500 dark:text-gray-600" />
               {session?.user?.email || "—"}
             </div>
           </div>
         </div>
       </div>
 
-      <div className="bg-gray-900 rounded-xl border border-gray-800 p-6">
+      <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-6">
         <h2 className="text-sm font-semibold text-white mb-1">API Access</h2>
         <p className="text-xs text-gray-500 mb-4">
           Use these endpoints to integrate EvalForge into your CI/CD pipeline.
         </p>
-        <div className="bg-gray-800 rounded-lg p-3 font-mono text-xs text-gray-400 space-y-1">
+        <div className="bg-gray-100 dark:bg-gray-800 rounded-lg p-3 font-mono text-xs text-gray-600 dark:text-gray-400 space-y-1">
           <div>POST {process.env.NEXT_PUBLIC_API_URL}/eval-runs</div>
           <div>GET  {process.env.NEXT_PUBLIC_API_URL}/eval-runs/{"{id}"}</div>
         </div>
@@ -63,7 +63,7 @@ function ProfileTab() {
         </a>
       </div>
 
-      <div className="bg-gray-900 rounded-xl border border-gray-800 p-6">
+      <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-6">
         <h2 className="text-sm font-semibold text-white mb-1 flex items-center gap-2">
           <Shield size={14} className="text-emerald-400" />
           Security
@@ -128,18 +128,18 @@ function AlertsTab() {
       </div>
 
       {showForm && (
-        <div className="bg-gray-900 rounded-xl border border-gray-800 p-5">
+        <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-5">
           <div className="grid grid-cols-2 gap-3 mb-4">
             <input
               placeholder="Alert name (e.g. Low overall score)"
               value={form.name}
               onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
-              className="col-span-2 bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none"
+              className="col-span-2 bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none"
             />
             <select
               value={form.metric}
               onChange={e => setForm(f => ({ ...f, metric: e.target.value }))}
-              className="bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none"
+              className="bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none"
             >
               <option value="overall_score">Overall Score</option>
               <option value="hallucination_score">Hallucination-Free %</option>
@@ -150,7 +150,7 @@ function AlertsTab() {
               <select
                 value={form.operator}
                 onChange={e => setForm(f => ({ ...f, operator: e.target.value }))}
-                className="bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none w-20"
+                className="bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none w-20"
               >
                 <option value="lt">{"<"}</option>
                 <option value="lte">{"≤"}</option>
@@ -161,7 +161,7 @@ function AlertsTab() {
                 type="number"
                 value={form.threshold}
                 onChange={e => setForm(f => ({ ...f, threshold: +e.target.value }))}
-                className="bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none flex-1"
+                className="bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none flex-1"
               />
             </div>
           </div>
@@ -173,7 +173,7 @@ function AlertsTab() {
             >
               Create
             </button>
-            <button onClick={() => setShowForm(false)} className="text-gray-400 text-xs px-3">
+            <button onClick={() => setShowForm(false)} className="text-gray-600 dark:text-gray-400 text-xs px-3">
               Cancel
             </button>
           </div>
@@ -181,16 +181,16 @@ function AlertsTab() {
       )}
 
       {isLoading ? (
-        <div className="text-gray-600 text-xs">Loading...</div>
+        <div className="text-gray-500 dark:text-gray-600 text-xs">Loading...</div>
       ) : alerts.length === 0 ? (
-        <div className="bg-gray-900 rounded-xl border border-gray-800 p-8 text-center">
-          <Bell size={24} className="text-gray-700 mx-auto mb-2" />
+        <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-8 text-center">
+          <Bell size={24} className="text-gray-400 dark:text-gray-700 mx-auto mb-2" />
           <p className="text-gray-500 text-xs">No alert rules configured</p>
         </div>
       ) : (
         <div className="space-y-2">
           {alerts.map((alert: any) => (
-            <div key={alert.id} className="bg-gray-900 rounded-xl border border-gray-800 p-4 flex items-center justify-between">
+            <div key={alert.id} className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-4 flex items-center justify-between">
               <div>
                 <div className="text-sm text-white font-medium">{alert.name}</div>
                 <div className="text-xs text-gray-500 mt-0.5 font-mono">
@@ -199,7 +199,7 @@ function AlertsTab() {
               </div>
               <button
                 onClick={() => deleteMutation.mutate(alert.id)}
-                className="text-gray-600 hover:text-red-400 p-1.5"
+                className="text-gray-500 dark:text-gray-600 hover:text-red-400 p-1.5"
               >
                 <Trash2 size={14} />
               </button>
@@ -216,25 +216,25 @@ function TeamTab() {
 
   return (
     <div className="space-y-6">
-      <div className="bg-gray-900 rounded-xl border border-gray-800 p-6">
+      <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-6">
         <h2 className="text-sm font-semibold text-white mb-1">Workspace Members</h2>
         <p className="text-xs text-gray-500 mb-4">
           Free plan supports 1 member. Upgrade to Team for up to 10 members.
         </p>
-        <div className="flex items-center gap-3 bg-gray-800 rounded-lg p-3">
+        <div className="flex items-center gap-3 bg-gray-100 dark:bg-gray-800 rounded-lg p-3">
           <div className="w-8 h-8 bg-indigo-600/30 rounded-full flex items-center justify-center">
             <User size={14} className="text-indigo-400" />
           </div>
           <div className="flex-1">
-            <div className="text-sm text-gray-300">{session?.user?.name}</div>
-            <div className="text-xs text-gray-600">{session?.user?.email}</div>
+            <div className="text-sm text-gray-700 dark:text-gray-300">{session?.user?.name}</div>
+            <div className="text-xs text-gray-500 dark:text-gray-600">{session?.user?.email}</div>
           </div>
           <span className="text-xs bg-indigo-900/40 text-indigo-300 px-2 py-0.5 rounded-full">Owner</span>
         </div>
       </div>
       <Link
         href="/billing"
-        className="block bg-gray-900 rounded-xl border border-gray-800 p-4 text-sm text-indigo-400 hover:text-indigo-300 text-center"
+        className="block bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-4 text-sm text-indigo-400 hover:text-indigo-300 text-center"
       >
         Upgrade to Team plan for more members →
       </Link>
@@ -244,10 +244,10 @@ function TeamTab() {
 
 function BillingTab() {
   return (
-    <div className="bg-gray-900 rounded-xl border border-gray-800 p-8 text-center">
-      <CreditCard size={28} className="text-gray-700 mx-auto mb-3" />
-      <p className="text-gray-400 text-sm mb-1">Manage your subscription</p>
-      <p className="text-gray-600 text-xs mb-4">View plans, upgrade, or manage billing</p>
+    <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-8 text-center">
+      <CreditCard size={28} className="text-gray-400 dark:text-gray-700 mx-auto mb-3" />
+      <p className="text-gray-600 dark:text-gray-400 text-sm mb-1">Manage your subscription</p>
+      <p className="text-gray-500 dark:text-gray-600 text-xs mb-4">View plans, upgrade, or manage billing</p>
       <Link
         href="/billing"
         className="inline-block bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2 rounded-lg text-sm font-medium"
@@ -264,9 +264,9 @@ export default function SettingsPage() {
   return (
     <div className="p-8 max-w-3xl mx-auto">
       <h1 className="text-2xl font-bold text-white mb-1">Settings</h1>
-      <p className="text-gray-400 text-sm mb-8">Manage your account, alerts, and team</p>
+      <p className="text-gray-600 dark:text-gray-400 text-sm mb-8">Manage your account, alerts, and team</p>
 
-      <div className="flex gap-1 mb-6 border-b border-gray-800">
+      <div className="flex gap-1 mb-6 border-b border-gray-200 dark:border-gray-800">
         {TABS.map(({ id, label, icon: Icon }) => (
           <button
             key={id}
@@ -275,7 +275,7 @@ export default function SettingsPage() {
               "flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors",
               activeTab === id
                 ? "border-indigo-500 text-white"
-                : "border-transparent text-gray-500 hover:text-gray-300"
+                : "border-transparent text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
             )}
           >
             <Icon size={14} />

@@ -35,9 +35,9 @@ const USE_CASES = [
 
 export default function RootPage() {
   return (
-    <div className="min-h-screen bg-gray-950 text-gray-100">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-950 text-gray-900 dark:text-gray-100">
       {/* Nav */}
-      <header className="border-b border-gray-800">
+      <header className="border-b border-gray-200 dark:border-gray-800">
         <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
             <div className="w-7 h-7 bg-indigo-600 rounded-lg flex items-center justify-center">
@@ -50,7 +50,7 @@ export default function RootPage() {
               href="https://github.com/Vedu8767/evalforge"
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center gap-1.5 text-sm text-gray-400 hover:text-white transition-colors"
+              className="flex items-center gap-1.5 text-sm text-gray-600 dark:text-gray-400 hover:text-white transition-colors"
             >
               <Github size={16} /> GitHub
             </a>
@@ -72,7 +72,7 @@ export default function RootPage() {
         <h1 className="text-4xl sm:text-5xl font-bold text-white tracking-tight leading-tight mb-5">
           Evaluation infrastructure for India&apos;s AI moment
         </h1>
-        <p className="text-lg text-gray-400 max-w-2xl mx-auto mb-9 leading-relaxed">
+        <p className="text-lg text-gray-600 dark:text-gray-400 max-w-2xl mx-auto mb-9 leading-relaxed">
           India is deploying LLMs into government, healthcare, legal, and education faster than
           anyone is testing them. EvalForge is the evaluation and red-teaming layer that checks
           for hallucination, jailbreak resistance, and DPDP Act compliance — before a model
@@ -89,7 +89,7 @@ export default function RootPage() {
             href="https://github.com/Vedu8767/evalforge"
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center gap-2 border border-gray-700 hover:border-gray-600 text-gray-300 font-medium px-5 py-2.5 rounded-lg transition-colors"
+            className="flex items-center gap-2 border border-gray-300 dark:border-gray-700 hover:border-gray-400 dark:hover:border-gray-600 text-gray-700 dark:text-gray-300 font-medium px-5 py-2.5 rounded-lg transition-colors"
           >
             <Github size={16} /> View source
           </a>
@@ -102,7 +102,7 @@ export default function RootPage() {
           <AlertTriangle className="text-red-400 flex-shrink-0 mt-0.5" size={20} />
           <div>
             <div className="text-sm font-semibold text-red-300 mb-1">The gap</div>
-            <p className="text-sm text-gray-400 leading-relaxed">
+            <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
               No Indian team has built evaluation infrastructure specifically for Indic-language
               models, government AI deployments, and DPDP-Act-grade data handling. Global eval
               tools benchmark English chatbots — they weren&apos;t built for a health worker in
@@ -119,7 +119,7 @@ export default function RootPage() {
         </h2>
         <div className="grid sm:grid-cols-2 gap-5">
           {PILLARS.map(({ icon: Icon, title, body }) => (
-            <div key={title} className="bg-gray-900 border border-gray-800 rounded-2xl p-6">
+            <div key={title} className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl p-6">
               <div className="w-10 h-10 bg-indigo-600/20 rounded-xl flex items-center justify-center mb-4">
                 <Icon size={18} className="text-indigo-400" />
               </div>
@@ -139,10 +139,10 @@ export default function RootPage() {
           {USE_CASES.map(({ icon: Icon, label, note }) => (
             <div
               key={label}
-              className="flex items-center gap-4 bg-gray-900 border border-gray-800 rounded-xl px-5 py-4"
+              className="flex items-center gap-4 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl px-5 py-4"
             >
-              <div className="w-9 h-9 bg-gray-800 rounded-lg flex items-center justify-center flex-shrink-0">
-                <Icon size={16} className="text-gray-400" />
+              <div className="w-9 h-9 bg-gray-100 dark:bg-gray-800 rounded-lg flex items-center justify-center flex-shrink-0">
+                <Icon size={16} className="text-gray-600 dark:text-gray-400" />
               </div>
               <div>
                 <div className="text-sm font-medium text-white">{label}</div>
@@ -154,7 +154,7 @@ export default function RootPage() {
       </section>
 
       {/* Footer CTA */}
-      <footer className="border-t border-gray-800">
+      <footer className="border-t border-gray-200 dark:border-gray-800">
         <div className="max-w-4xl mx-auto px-6 py-10 text-center">
           <p className="text-sm text-gray-500 mb-4">
             Built end-to-end — FastAPI, Celery, Redis, PostgreSQL (pgvector), Next.js.

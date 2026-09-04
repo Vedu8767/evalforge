@@ -14,8 +14,8 @@ export default function Error({
   }, [error]);
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-gray-950 p-8">
-      <div className="max-w-md w-full bg-gray-900 rounded-2xl border border-gray-800 p-8 text-center">
+    <div className="flex items-center justify-center min-h-screen bg-gray-50 dark:bg-gray-950 p-8">
+      <div className="max-w-md w-full bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-8 text-center">
         <div className="w-12 h-12 bg-red-900/30 rounded-xl flex items-center justify-center mx-auto mb-4">
           <AlertTriangle size={24} className="text-red-400" />
         </div>
@@ -32,13 +32,13 @@ export default function Error({
           </button>
           <button
             onClick={() => window.location.href = "/dashboard"}
-            className="bg-gray-800 hover:bg-gray-700 text-gray-300 px-5 py-2 rounded-lg text-sm font-medium transition-colors"
+            className="bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 px-5 py-2 rounded-lg text-sm font-medium transition-colors"
           >
             Go to Dashboard
           </button>
         </div>
         {error.digest && (
-          <p className="text-xs text-gray-700 mt-4">Error ID: {error.digest}</p>
+          <p className="text-xs text-gray-400 dark:text-gray-700 mt-4">Error ID: {error.digest}</p>
         )}
       </div>
     </div>

@@ -19,13 +19,13 @@ function ScoreCard({
   sub: string;
 }) {
   const scoreColor =
-    value === null ? "text-gray-600" :
+    value === null ? "text-gray-500 dark:text-gray-600" :
     value >= 90 ? "text-emerald-400" :
     value >= 75 ? "text-green-400" :
     value >= 60 ? "text-yellow-400" : "text-red-400";
 
   return (
-    <div className="bg-gray-900 rounded-xl border border-gray-800 p-5">
+    <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-5">
       <div className="flex items-center justify-between mb-3">
         <span className="text-xs text-gray-500 uppercase tracking-wider font-medium">{label}</span>
         <Icon size={14} className={color} />
@@ -33,7 +33,7 @@ function ScoreCard({
       <div className={clsx("text-3xl font-bold tabular-nums mb-1", scoreColor)}>
         {value === null ? "—" : value.toFixed(1)}
       </div>
-      <div className="text-xs text-gray-600">{sub}</div>
+      <div className="text-xs text-gray-500 dark:text-gray-600">{sub}</div>
     </div>
   );
 }
@@ -42,11 +42,11 @@ function StatusBadge({ status }: { status: string }) {
   const map: Record<string, string> = {
     completed: "bg-emerald-900/40 text-emerald-300",
     running:   "bg-blue-900/40 text-blue-300 animate-pulse",
-    queued:    "bg-gray-800 text-gray-400",
+    queued:    "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400",
     failed:    "bg-red-900/40 text-red-300",
   };
   return (
-    <span className={clsx("px-2 py-0.5 rounded-full text-xs font-medium", map[status] ?? "bg-gray-800 text-gray-400")}>
+    <span className={clsx("px-2 py-0.5 rounded-full text-xs font-medium", map[status] ?? "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400")}>
       {status}
     </span>
   );
@@ -96,7 +96,7 @@ export default function DashboardPage() {
       <div className="flex items-center justify-between mb-8">
         <div>
           <h1 className="text-2xl font-bold text-white">Dashboard</h1>
-          <p className="text-gray-400 text-sm mt-1">LLM health at a glance</p>
+          <p className="text-gray-600 dark:text-gray-400 text-sm mt-1">LLM health at a glance</p>
         </div>
         <Link
           href="/eval-runs/new"
@@ -140,7 +140,7 @@ export default function DashboardPage() {
 
       {/* Score trend chart */}
       {chartData.length >= 2 && (
-        <div className="bg-gray-900 rounded-xl border border-gray-800 p-6 mb-8">
+        <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-6 mb-8">
           <div className="text-sm font-medium text-white mb-4">Score Trend</div>
           <ResponsiveContainer width="100%" height={200}>
             <LineChart data={chartData}>
@@ -161,8 +161,8 @@ export default function DashboardPage() {
       )}
 
       {/* Recent eval runs */}
-      <div className="bg-gray-900 rounded-xl border border-gray-800">
-        <div className="px-6 py-4 border-b border-gray-800 flex items-center justify-between">
+      <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800">
+        <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-800 flex items-center justify-between">
           <div className="text-sm font-medium text-white">Recent Eval Runs</div>
           <Link href="/eval-runs" className="text-xs text-indigo-400 hover:text-indigo-300">
             View all →
@@ -170,22 +170,22 @@ export default function DashboardPage() {
         </div>
 
         {isLoading ? (
-          <div className="p-8 text-center text-gray-600 text-sm">Loading...</div>
+          <div className="p-8 text-center text-gray-500 dark:text-gray-600 text-sm">Loading...</div>
         ) : runs.length === 0 ? (
           <div className="p-12 text-center">
-            <Play size={28} className="text-gray-700 mx-auto mb-3" />
+            <Play size={28} className="text-gray-400 dark:text-gray-700 mx-auto mb-3" />
             <p className="text-gray-500 text-sm">No eval runs yet.</p>
             <Link href="/eval-runs/new" className="text-indigo-400 text-sm hover:underline mt-1 inline-block">
               Create your first eval run →
             </Link>
           </div>
         ) : (
-          <div className="divide-y divide-gray-800">
+          <div className="divide-y divide-gray-200 dark:divide-gray-800">
             {runs.slice(0, 8).map((run: any) => (
               <Link
                 key={run.id}
                 href={`/eval-runs/${run.id}`}
-                className="flex items-center justify-between px-6 py-4 hover:bg-gray-800/40 transition-colors"
+                className="flex items-center justify-between px-6 py-4 hover:bg-gray-100 dark:hover:bg-gray-800/40 transition-colors"
               >
                 <div className="flex items-center gap-3">
                   <div>

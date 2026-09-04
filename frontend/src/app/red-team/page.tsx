@@ -120,7 +120,7 @@ export default function RedTeamPage() {
           </div>
           <h1 className="text-2xl font-bold text-white">Red Team Testing</h1>
         </div>
-        <p className="text-gray-400 text-sm">
+        <p className="text-gray-600 dark:text-gray-400 text-sm">
           Test your LLM against adversarial probes across 5 jailbreak attack categories,
           in English, Hindi, Marathi, and Hinglish. A resistant model should refuse every probe.
         </p>
@@ -131,7 +131,7 @@ export default function RedTeamPage() {
         <div className="col-span-2 space-y-5">
 
           {/* Model selection */}
-          <div className="bg-gray-900 rounded-xl border border-gray-800 p-5">
+          <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-5">
             <div className="text-sm font-medium text-white mb-3">Target Model</div>
             {models.length === 0 ? (
               <div className="text-xs text-gray-500">
@@ -142,7 +142,7 @@ export default function RedTeamPage() {
               <select
                 value={selectedModel}
                 onChange={e => setSelectedModel(e.target.value)}
-                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500"
+                className="w-full bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500"
               >
                 <option value="">Select a model...</option>
                 {models.map((m: any) => (
@@ -153,7 +153,7 @@ export default function RedTeamPage() {
           </div>
 
           {/* Language filter */}
-          <div className="bg-gray-900 rounded-xl border border-gray-800 p-5">
+          <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-5">
             <div className="text-sm font-medium text-white mb-3">Test Language</div>
             <div className="flex flex-wrap gap-2">
               {LANGUAGES.map(lang => (
@@ -164,7 +164,7 @@ export default function RedTeamPage() {
                     "px-3 py-1.5 rounded-full text-xs font-medium border transition-all",
                     selectedLanguages.includes(lang.id)
                       ? "border-emerald-500 bg-emerald-600/20 text-emerald-300"
-                      : "border-gray-700 text-gray-500 hover:border-gray-600"
+                      : "border-gray-300 dark:border-gray-700 text-gray-500 hover:border-gray-400 dark:hover:border-gray-600"
                   )}
                 >
                   {lang.label}
@@ -174,7 +174,7 @@ export default function RedTeamPage() {
           </div>
 
           {/* Probe categories */}
-          <div className="bg-gray-900 rounded-xl border border-gray-800 p-5">
+          <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-5">
             <div className="flex items-center justify-between mb-4">
               <div className="text-sm font-medium text-white">Attack Probes</div>
               <div className="flex gap-2">
@@ -184,10 +184,10 @@ export default function RedTeamPage() {
                 >
                   Select all
                 </button>
-                <span className="text-gray-700">·</span>
+                <span className="text-gray-400 dark:text-gray-700">·</span>
                 <button
                   onClick={() => setSelectedProbes([])}
-                  className="text-xs text-gray-500 hover:text-gray-300"
+                  className="text-xs text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
                 >
                   Clear
                 </button>
@@ -205,7 +205,7 @@ export default function RedTeamPage() {
                     <div className="flex items-center justify-between mb-2">
                       <div>
                         <span className={clsx("text-xs font-medium", cat.color)}>{cat.label}</span>
-                        <span className="text-xs text-gray-600 ml-2">{cat.description}</span>
+                        <span className="text-xs text-gray-500 dark:text-gray-600 ml-2">{cat.description}</span>
                       </div>
                       <span className="text-xs text-gray-500">{selectedCount}/{catProbes.length}</span>
                     </div>
@@ -218,7 +218,7 @@ export default function RedTeamPage() {
                             "flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border transition-all",
                             selectedProbes.includes(probe.id)
                               ? "border-indigo-500 bg-indigo-600/20 text-indigo-300"
-                              : "border-gray-700 text-gray-500 hover:border-gray-600"
+                              : "border-gray-300 dark:border-gray-700 text-gray-500 hover:border-gray-400 dark:hover:border-gray-600"
                           )}
                         >
                           <span className={clsx("w-1.5 h-1.5 rounded-full", RISK_COLOR[probe.risk]?.split(" ")[0].replace("text", "bg"))} />
@@ -254,9 +254,9 @@ export default function RedTeamPage() {
 
         {/* Right — info panel */}
         <div className="space-y-4">
-          <div className="bg-gray-900 rounded-xl border border-gray-800 p-5">
+          <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-5">
             <div className="text-sm font-medium text-white mb-3">How it works</div>
-            <div className="space-y-3 text-xs text-gray-400">
+            <div className="space-y-3 text-xs text-gray-600 dark:text-gray-400">
               <div className="flex gap-2">
                 <span className="text-indigo-400 font-bold">1.</span>
                 Each probe sends an adversarial prompt designed to bypass safety guidelines
@@ -272,7 +272,7 @@ export default function RedTeamPage() {
             </div>
           </div>
 
-          <div className="bg-gray-900 rounded-xl border border-gray-800 p-5">
+          <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-5">
             <div className="text-sm font-medium text-white mb-3">Risk Levels</div>
             <div className="space-y-2">
               {["critical", "high", "medium", "low"].map(risk => (
@@ -291,7 +291,7 @@ export default function RedTeamPage() {
             </div>
           </div>
 
-          <div className="bg-gray-900 rounded-xl border border-gray-800 p-5">
+          <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-5">
             <div className="text-sm font-medium text-white mb-1">Selected probes</div>
             <div className="text-3xl font-bold text-white">{activeProbeIds.length}</div>
             <div className="text-xs text-gray-500">of {PROBES.length} total, across {LANGUAGES.length} languages</div>

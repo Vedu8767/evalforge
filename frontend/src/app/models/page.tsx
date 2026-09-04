@@ -59,7 +59,7 @@ export default function ModelsPage() {
       <div className="flex items-center justify-between mb-8">
         <div>
           <h1 className="text-2xl font-bold text-white">Model Endpoints</h1>
-          <p className="text-gray-400 text-sm mt-1">Register any OpenAI-compatible LLM to evaluate</p>
+          <p className="text-gray-600 dark:text-gray-400 text-sm mt-1">Register any OpenAI-compatible LLM to evaluate</p>
         </div>
         <button
           onClick={() => setShowForm(!showForm)}
@@ -71,12 +71,12 @@ export default function ModelsPage() {
 
       {/* Create form */}
       {showForm && (
-        <div className="bg-gray-900 rounded-xl border border-gray-800 p-6 mb-6">
+        <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-6 mb-6">
           <h2 className="text-sm font-semibold text-white mb-5">Register new model endpoint</h2>
           <div className="grid grid-cols-2 gap-4">
             {/* Provider */}
             <div className="col-span-2">
-              <label className="text-xs text-gray-400 block mb-1.5">Provider</label>
+              <label className="text-xs text-gray-600 dark:text-gray-400 block mb-1.5">Provider</label>
               <div className="flex gap-2">
                 {PROVIDERS.map((p) => (
                   <button
@@ -90,7 +90,7 @@ export default function ModelsPage() {
                       "px-4 py-2 rounded-lg text-sm border transition-colors",
                       form.provider === p.id
                         ? "border-indigo-500 bg-indigo-600/10 text-indigo-300"
-                        : "border-gray-700 text-gray-400 hover:border-gray-600"
+                        : "border-gray-300 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:border-gray-400 dark:hover:border-gray-600"
                     )}
                   >
                     {p.label}
@@ -100,22 +100,22 @@ export default function ModelsPage() {
             </div>
 
             <div>
-              <label className="text-xs text-gray-400 block mb-1.5">Display name</label>
+              <label className="text-xs text-gray-600 dark:text-gray-400 block mb-1.5">Display name</label>
               <input
                 value={form.name}
                 onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
                 placeholder="GPT-4o Production"
-                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500"
+                className="w-full bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500"
               />
             </div>
 
             <div>
-              <label className="text-xs text-gray-400 block mb-1.5">Model name</label>
+              <label className="text-xs text-gray-600 dark:text-gray-400 block mb-1.5">Model name</label>
               {selectedProvider && selectedProvider.models.length > 0 ? (
                 <select
                   value={form.model_name}
                   onChange={(e) => setForm((f) => ({ ...f, model_name: e.target.value }))}
-                  className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none"
+                  className="w-full bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none"
                 >
                   {selectedProvider.models.map((m) => <option key={m} value={m}>{m}</option>)}
                 </select>
@@ -124,45 +124,45 @@ export default function ModelsPage() {
                   value={form.model_name}
                   onChange={(e) => setForm((f) => ({ ...f, model_name: e.target.value }))}
                   placeholder="your-model-name"
-                  className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none"
+                  className="w-full bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none"
                 />
               )}
             </div>
 
             <div className="col-span-2">
-              <label className="text-xs text-gray-400 block mb-1.5">Base URL</label>
+              <label className="text-xs text-gray-600 dark:text-gray-400 block mb-1.5">Base URL</label>
               <input
                 value={form.base_url}
                 onChange={(e) => setForm((f) => ({ ...f, base_url: e.target.value }))}
-                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none"
+                className="w-full bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none"
               />
             </div>
 
             <div className="col-span-2">
-              <label className="text-xs text-gray-400 block mb-1.5">API Key</label>
+              <label className="text-xs text-gray-600 dark:text-gray-400 block mb-1.5">API Key</label>
               <input
                 type="password"
                 value={form.api_key}
                 onChange={(e) => setForm((f) => ({ ...f, api_key: e.target.value }))}
                 placeholder="sk-..."
-                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none font-mono"
+                className="w-full bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none font-mono"
               />
-              <p className="text-xs text-gray-600 mt-1">Encrypted with AES-256 before storage. Never returned in plaintext.</p>
+              <p className="text-xs text-gray-500 dark:text-gray-600 mt-1">Encrypted with AES-256 before storage. Never returned in plaintext.</p>
             </div>
 
             <div className="col-span-2">
-              <label className="text-xs text-gray-400 block mb-1.5">System prompt (optional)</label>
+              <label className="text-xs text-gray-600 dark:text-gray-400 block mb-1.5">System prompt (optional)</label>
               <textarea
                 value={form.system_prompt}
                 onChange={(e) => setForm((f) => ({ ...f, system_prompt: e.target.value }))}
                 rows={3}
                 placeholder="You are a helpful assistant..."
-                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none resize-none"
+                className="w-full bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none resize-none"
               />
             </div>
 
             <div>
-              <label className="text-xs text-gray-400 block mb-1.5">Temperature: {form.temperature}</label>
+              <label className="text-xs text-gray-600 dark:text-gray-400 block mb-1.5">Temperature: {form.temperature}</label>
               <input type="range" min={0} max={2} step={0.1} value={form.temperature}
                 onChange={(e) => setForm((f) => ({ ...f, temperature: parseFloat(e.target.value) }))}
                 className="w-full accent-indigo-600"
@@ -170,11 +170,11 @@ export default function ModelsPage() {
             </div>
 
             <div>
-              <label className="text-xs text-gray-400 block mb-1.5">Max tokens</label>
+              <label className="text-xs text-gray-600 dark:text-gray-400 block mb-1.5">Max tokens</label>
               <input
                 type="number" min={1} max={32000} value={form.max_tokens}
                 onChange={(e) => setForm((f) => ({ ...f, max_tokens: +e.target.value }))}
-                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none"
+                className="w-full bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none"
               />
             </div>
           </div>
@@ -187,7 +187,7 @@ export default function ModelsPage() {
             >
               {createMutation.isPending ? "Saving..." : "Save endpoint"}
             </button>
-            <button onClick={() => setShowForm(false)} className="text-gray-400 hover:text-white text-sm px-3">
+            <button onClick={() => setShowForm(false)} className="text-gray-600 dark:text-gray-400 hover:text-white text-sm px-3">
               Cancel
             </button>
           </div>
@@ -196,10 +196,10 @@ export default function ModelsPage() {
 
       {/* Model list */}
       {isLoading ? (
-        <div className="text-gray-600 text-sm">Loading...</div>
+        <div className="text-gray-500 dark:text-gray-600 text-sm">Loading...</div>
       ) : models.length === 0 ? (
-        <div className="bg-gray-900 rounded-xl border border-gray-800 p-12 text-center">
-          <Cpu size={32} className="text-gray-700 mx-auto mb-3" />
+        <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-12 text-center">
+          <Cpu size={32} className="text-gray-400 dark:text-gray-700 mx-auto mb-3" />
           <p className="text-gray-500 text-sm">No model endpoints yet.</p>
           <button onClick={() => setShowForm(true)} className="text-indigo-400 text-sm hover:underline mt-1">
             Register your first model →
@@ -210,26 +210,26 @@ export default function ModelsPage() {
           {models.map((m) => {
             const testResult = testResults[m.id];
             return (
-              <div key={m.id} className="bg-gray-900 rounded-xl border border-gray-800 p-5">
+              <div key={m.id} className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-5">
                 <div className="flex items-start justify-between">
                   <div>
                     <div className="flex items-center gap-2 mb-1">
                       <span className="text-sm font-medium text-white">{m.name}</span>
-                      <span className="text-xs bg-gray-800 text-gray-400 px-2 py-0.5 rounded-full">{m.provider}</span>
+                      <span className="text-xs bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 px-2 py-0.5 rounded-full">{m.provider}</span>
                     </div>
                     <div className="text-xs text-gray-500">{m.model_name} · {m.base_url}</div>
-                    <div className="text-xs text-gray-600 font-mono mt-0.5">{m.api_key_masked}</div>
+                    <div className="text-xs text-gray-500 dark:text-gray-600 font-mono mt-0.5">{m.api_key_masked}</div>
                   </div>
                   <div className="flex items-center gap-2">
                     <button
                       onClick={() => handleTest(m.id)}
-                      className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-white border border-gray-700 hover:border-gray-600 rounded-lg px-3 py-1.5 transition-colors"
+                      className="flex items-center gap-1.5 text-xs text-gray-600 dark:text-gray-400 hover:text-white border border-gray-300 dark:border-gray-700 hover:border-gray-400 dark:hover:border-gray-600 rounded-lg px-3 py-1.5 transition-colors"
                     >
                       <Zap size={12} /> Test
                     </button>
                     <button
                       onClick={() => deleteMutation.mutate(m.id)}
-                      className="text-gray-600 hover:text-red-400 p-1.5 rounded-lg transition-colors"
+                      className="text-gray-500 dark:text-gray-600 hover:text-red-400 p-1.5 rounded-lg transition-colors"
                     >
                       <Trash2 size={14} />
                     </button>
@@ -240,7 +240,7 @@ export default function ModelsPage() {
                 {testResult !== undefined && (
                   <div className={clsx(
                     "mt-3 p-3 rounded-lg text-xs",
-                    testResult === null ? "bg-gray-800 text-gray-500" :
+                    testResult === null ? "bg-gray-100 dark:bg-gray-800 text-gray-500" :
                     testResult.success ? "bg-emerald-900/20 border border-emerald-800/50" :
                     "bg-red-900/20 border border-red-800/50"
                   )}>
@@ -251,7 +251,7 @@ export default function ModelsPage() {
                         <CheckCircle size={12} className="text-emerald-400 mt-0.5 flex-shrink-0" />
                         <div>
                           <div className="text-emerald-300 font-medium mb-0.5">Connected · {testResult.latency_ms}ms</div>
-                          <div className="text-gray-400 font-mono">{testResult.output}</div>
+                          <div className="text-gray-600 dark:text-gray-400 font-mono">{testResult.output}</div>
                         </div>
                       </div>
                     ) : (
